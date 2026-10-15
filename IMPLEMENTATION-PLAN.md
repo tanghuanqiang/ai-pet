@@ -30,7 +30,7 @@
 - [x] 同一窗口接收 1–4 张图片及 Prompt，保存本地制作请求，接收 Agent 候选并进入确认预览；本机模板网页改为渐进展开。
 - [x] 创建可分发 Skill，格式校验及安装版命令检查通过。
 - [x] 公开源码脱离私人参考图构建，公开演示宠物、安装器与隔离安装通过。
-- [ ] 推送到用户确认的 `tanghuanqiang/ai-pet`，发布首个预览包。
+- [x] 已推送到用户确认的 [tanghuanqiang/ai-pet](https://github.com/tanghuanqiang/ai-pet)，发布 [v0.3.0-preview.1](https://github.com/tanghuanqiang/ai-pet/releases/tag/v0.3.0-preview.1) Windows 包和 Skill；上传后指纹一致。
 - [ ] 配置生成后端后，直接从“生成”完成自动执行、失败重试及结果回传；当前需用户让 Agent 处理已保存请求。
 - [ ] 使用真实新照片与自定义 Prompt 完成生成质量、新手流程验收；当前流程验证使用代码绘制的示例，不能替代 AI 动作质量验收。
 - [ ] 补充具体 AI 工具适配器与其他 Windows 设备验证；当前有通用 Agent 事件接口及实验性本机 Codex 关联。
