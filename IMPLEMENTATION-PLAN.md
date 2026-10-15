@@ -33,9 +33,10 @@
 - [x] 已推送到用户确认的 [tanghuanqiang/ai-pet](https://github.com/tanghuanqiang/ai-pet)，发布 [v0.3.0-preview.1](https://github.com/tanghuanqiang/ai-pet/releases/tag/v0.3.0-preview.1) Windows 包和 Skill；上传后指纹一致。
 - [ ] 配置生成后端后，直接从“生成”完成自动执行、失败重试及结果回传；当前需用户让 Agent 处理已保存请求。
 - [ ] 使用真实新照片与自定义 Prompt 完成生成质量、新手流程验收；当前流程验证使用代码绘制的示例，不能替代 AI 动作质量验收。
-- [ ] 补充具体 AI 工具适配器与其他 Windows 设备验证；当前有通用 Agent 事件接口及实验性本机 Codex 关联。
+- [ ] 继续补充其他具体 AI 工具适配器与跨 Windows 设备验证。
 - [x] 优先补充 Codex 适配：Agent 直接绑定当前会话、本机会话与 Hooks 共用五状态映射；隔离回归通过，并观察到当前真实 Codex 会话的工具活动触发工作动作。
 - [ ] Codex Hooks 在用户实际客户端审核信任后，完成真实提交、结束、中断、授权提示的端到端验收；事件样本回归不替代这项验收。其他 Windows 设备尚待验证。
+- [x] 发布 [v0.3.0-preview.2](https://github.com/tanghuanqiang/ai-pet/releases/tag/v0.3.0-preview.2)：完整桌面回归、公开源码构建与安装包内 Codex 命令回归通过；Windows ZIP 与 Skill 的远端 SHA-256 与本地一致。验证使用隔离安装，未覆盖正式安装。
 
 截至本轮的定位是可用能力逐项验证的开源预览版，尚未将完整自定义生成目标标为完成。GitHub 账号正常权限核实可用，不需要重新登录。
 
