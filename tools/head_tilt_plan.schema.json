@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "action",
+    "preparation",
+    "motion",
+    "settle",
+    "identityConstraint",
+    "reviewFocus",
+    "durationSeconds",
+    "motionIntensity",
+    "headTiltExecution"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "enum": [
+        1
+      ]
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "head-tilt"
+      ]
+    },
+    "preparation": {
+      "type": "string"
+    },
+    "motion": {
+      "type": "string"
+    },
+    "settle": {
+      "type": "string"
+    },
+    "identityConstraint": {
+      "type": "string"
+    },
+    "reviewFocus": {
+      "type": "string"
+    },
+    "durationSeconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "motionIntensity": {
+      "type": "string",
+      "enum": [
+        "subtle",
+        "standard",
+        "expressive"
+      ]
+    },
+    "headTiltExecution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "supported",
+        "direction",
+        "degrees",
+        "durationSeconds",
+        "reason"
+      ],
+      "properties": {
+        "supported": {
+          "type": "boolean"
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "left",
+            "right"
+          ]
+        },
+        "degrees": {
+          "type": "integer",
+          "enum": [
+            4,
+            8
+          ]
+        },
+        "durationSeconds": {
+          "type": "integer",
+          "enum": [
+            2,
+            3,
+            4
+          ]
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

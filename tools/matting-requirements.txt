@@ -1,0 +1,7 @@
+# Isolated Windows CPU matting environment; avoids the developer base NumPy ABI.
+numpy==1.26.4
+scipy==1.13.1
+numba==0.60.0
+opencv-python-headless==4.10.0.84
+Pillow==11.3.0
+pymatting==1.1.16

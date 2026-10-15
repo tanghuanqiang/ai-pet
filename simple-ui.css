@@ -1,0 +1,21 @@
+.simple-experience .nav-section-label,
+.simple-experience [data-page="library"],
+.simple-experience .sidebar-bottom .upgrade-card,
+.simple-experience .welcome-row .welcome-art,
+.simple-experience .page-footer,
+.simple-experience .eyebrow { display: none; }
+.simple-experience .simple-step-title { font-size: 22px; margin: 24px 0 16px; }
+.simple-experience .welcome-row { margin-bottom: 20px; }
+.simple-experience .welcome-row h1 { font-size: clamp(28px, 3vw, 42px); }
+.simple-experience #replace-photo { width: auto; min-width: 100px; padding: 6px 12px; font-size: 12px; border-radius: 20px; }
+.simple-experience .simple-action-stage { padding: 28px; margin: 26px 0; border: 1px solid #e4ded4; border-radius: 22px; background: #fffdf9; }
+.simple-experience .simple-action-stage > h2 { margin: 0 0 12px; font-size: 24px; }
+.simple-experience .simple-action-stage > p { color: #706b63; line-height: 1.7; }
+.simple-experience .simple-action-stage > label { display: grid; gap: 10px; margin: 22px 0 18px; font-size: 14px; font-weight: 600; }
+.simple-experience .simple-action-stage textarea { box-sizing: border-box; width: 100%; resize: vertical; min-height: 100px; padding: 14px; border: 1px solid #d8d1c6; border-radius: 12px; background: white; color: #352f28; font: inherit; line-height: 1.7; }
+.simple-experience .simple-route-note { font-size: 13px; }
+.simple-experience .simple-disclosure { margin: 18px 0; border-top: 1px solid #e4ded4; padding-top: 16px; }
+.simple-experience .simple-disclosure > summary { cursor: pointer; color: #615848; font-size: 14px; padding: 8px 0; }
+.simple-experience .simple-disclosure .head-tilt-workshop { border: 0; padding: 12px 0; }
+.simple-experience .simple-disclosure > .simple-disclosure { margin-left: 12px; }
+@media (max-width: 700px) { .simple-experience .simple-action-stage { padding: 18px; } }

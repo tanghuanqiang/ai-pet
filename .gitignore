@@ -1,0 +1,35 @@
+# Local photos, works, logs and model environments are not source releases.
+generated/
+models/
+third_party/
+.venv*/
+.pip-cache*/
+comfy-cache/
+comfy-temp/
+comfy-user/
+3d/
+node_modules/
+__pycache__/
+*.pyc
+*.log
+*.tmp
+*.zip
+*.exe
+*.dll
+runtime/publish/
+runtime/public-publish/
+runtime/release/
+reference-cat.jpg
+assets/*.png
+runtime/assets/*.lotheme
+tools/vendor/
+.codex/
+.agents/
+.aws/
+.env
+.env.*
+*.key
+*.pem
+# Local historical experiment notebooks; the public plan is maintained separately.
+IMPLEMENTATION-STATUS.md
+AI-PET-PRD-TECH-ROUTE.md

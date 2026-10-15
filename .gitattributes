@@ -1,0 +1,2 @@
+# Optional model workers are pinned by whole-file SHA-256. Preserve source bytes.
+* -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

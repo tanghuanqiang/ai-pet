@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI-PET 桌面宠物"
+  short_description: "安装并配置 Windows 桌宠，连接自己的 AI 工具并自定义宠物动作"
+  default_prompt: "使用 $ai-pet 帮我安装桌宠、连接当前 AI 工具，并选择任务状态对应的动作。"

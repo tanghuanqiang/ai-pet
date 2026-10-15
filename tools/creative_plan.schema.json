@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "action", "preparation", "motion", "settle", "identityConstraint", "reviewFocus", "durationSeconds", "motionIntensity"],
+  "properties": {
+    "version": { "type": "integer", "enum": [1] },
+    "action": { "type": "string", "enum": ["wink", "head-tilt", "wave"] },
+    "preparation": { "type": "string" },
+    "motion": { "type": "string" },
+    "settle": { "type": "string" },
+    "identityConstraint": { "type": "string" },
+    "reviewFocus": { "type": "string" },
+    "durationSeconds": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "motionIntensity": { "type": "string", "enum": ["subtle", "standard", "expressive"] }
+  }
+}

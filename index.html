@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f6f4ef" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: http://127.0.0.1:4175 http://127.0.0.1:4176 http://127.0.0.1:4179 http://127.0.0.1:4180; media-src 'self' blob: http://127.0.0.1:4176 http://127.0.0.1:4179 http://127.0.0.1:4180; style-src 'self'; script-src 'self'; connect-src 'self' http://127.0.0.1:4174 http://localhost:4174 http://127.0.0.1:4175 http://127.0.0.1:4176 http://127.0.0.1:4178 http://127.0.0.1:4179 http://127.0.0.1:4180 http://127.0.0.1:4181; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <title>AI Pet Studio · 把喜欢的它，带到桌面上</title>
+    <link rel="stylesheet" href="./styles.css?v=20261006.2" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#studio" aria-label="AI Pet Studio 首页">
+          <span class="brand-mark"><span></span><span></span><span></span><span></span></span>
+          <span class="brand-name">little<span>orbit</span></span>
+        </a>
+        <div class="workspace-label">YOUR LITTLE UNIVERSE</div>
+        <nav class="main-nav" aria-label="主导航">
+          <button class="nav-item active" data-page="studio"><span class="nav-icon">✳</span><span>创作空间</span><span class="nav-dot"></span></button>
+          <button class="nav-item" data-page="characters"><span class="nav-icon">♡</span><span>我的角色</span><span class="nav-count" id="character-count">00</span></button>
+          <button class="nav-item" data-page="library"><span class="nav-icon">▧</span><span>动作素材</span></button>
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="desktop-card">
+            <div class="desktop-icon">⌘</div>
+            <div><strong>桌面陪伴</strong><span>本地预览模式</span></div>
+            <span class="online-dot"></span>
+          </div>
+          <button class="nav-item settings-link" data-page="settings"><span class="nav-icon">⚙</span><span>偏好设置</span></button>
+          <div class="profile-row"><div class="profile-avatar">M</div><div class="profile-copy"><strong>My little space</strong><span>免费创作空间</span></div><button class="more-button" aria-label="更多选项">···</button></div>
+        </div>
+      </aside>
+
+      <main class="main-area" id="studio-page">
+        <header class="topbar">
+          <div class="breadcrumb"><span>工作室</span><i>/</i><strong id="breadcrumb-current">创作空间</strong></div>
+          <div class="top-actions"><span class="saved-status"><span></span> 本地草稿</span><button class="help-button" title="关于本地创作">?</button><button class="avatar-mini">M</button></div>
+        </header>
+
+        <div class="page-content">
+          <section class="welcome-row">
+            <div><div class="eyebrow"><span class="eyebrow-star">✳</span> YOUR PET, YOUR LITTLE WORLD</div><h1>让喜欢的它，<em>住进桌面。</em></h1><p class="welcome-subtitle">从一张照片开始，慢慢做出只属于你们的小小伙伴。</p></div>
+            <div class="welcome-date"><span class="date-sun">☼</span><span>今天也要好好陪伴</span></div>
+          </section>
+
+          <section class="hero-grid">
+            <div class="photo-card">
+              <img id="hero-image" src="./reference-cat.jpg" alt="橘白猫参考照片" />
+              <div class="photo-gradient"></div>
+              <div class="photo-topline"><span class="photo-tag"><span class="tag-pulse"></span> 你的灵感照片</span><button id="replace-photo" class="photo-more" title="更换主照片">↗</button><input type="file" id="photo-input" accept="image/png,image/jpeg,image/webp" hidden /></div>
+              <div class="photo-caption"><span class="caption-kicker">A LITTLE FRIEND, A BIG FEELING</span><strong id="photo-caption-name">在木架间发现一只小猫</strong><span id="photo-caption-meta">橘白毛色 · 正面清晰 · 有项圈</span></div>
+              <div class="photo-counter"><span>01</span><span class="counter-line"></span><span>01</span></div>
+            </div>
+            <div class="creation-panel">
+              <div class="panel-top"><div><div class="section-overline">START WITH A PHOTO</div><h2>认识一下你的新伙伴</h2></div><span class="step-pill"><b>01</b> / 03</span></div>
+              <p class="panel-intro">照片会留在这台设备上。先告诉我们，这是怎样的一位小伙伴？</p>
+              <div class="mode-switch" role="group" aria-label="角色类型"><button class="mode-option selected" data-mode="real"><span class="mode-emoji">🐈</span><span><strong>真实宠物</strong><small>保留它独特的样子</small></span><span class="radio-mark"></span></button><button class="mode-option" data-mode="original"><span class="mode-emoji">✦</span><span><strong>原创角色</strong><small>从想象开始创造</small></span><span class="radio-mark"></span></button></div>
+              <div class="profile-fields"><label class="field-label" for="pet-name">给它一个名字 <span>可以以后再改</span></label><div class="name-input-wrap"><span class="name-spark">✳</span><input id="pet-name" maxlength="18" placeholder="比如：橘子、奶盖……" value="橘子" /><span class="input-counter" id="name-count">2 / 18</span></div></div>
+              <div class="photo-check" id="photo-check"><div class="check-icon">✓</div><div><strong>照片尺寸适合本地预览</strong><span>清晰度由本机估算 · 身份特征由你确认</span></div><button class="info-button" aria-label="照片预检说明" title="清晰度只根据缩小图的边缘细节作本机估算，受纹理与光线影响；不识别宠物身份、主体数量或遮挡。">i</button></div>
+              <fieldset class="photo-review"><legend>照片内容检查 · 由你确认</legend><div class="photo-review-field"><span>参考图是否都是同一只宠物？</span><div class="photo-review-options"><label><input type="radio" name="review-subject" value="one" />是一只</label><label><input type="radio" name="review-subject" value="multiple" />有多只</label><label><input type="radio" name="review-subject" value="uncertain" checked />不确定</label></div></div><div class="photo-review-field"><span>主体是否被遮挡或裁出画面？</span><div class="photo-review-options"><label><input type="radio" name="review-occlusion" value="clear" />没有发现</label><label><input type="radio" name="review-occlusion" value="present" />有遮挡/裁切</label><label><input type="radio" name="review-occlusion" value="uncertain" checked />不确定</label></div></div><small>这是你的人工记录，不是模型识别；更换任一参考照片后需重新确认。角色卡会保存这项记录。</small></fieldset>
+              <div class="photo-framing-note" id="photo-framing-note" role="note" hidden><span aria-hidden="true">!</span><div class="photo-framing-content"><p><strong>参考照片的取景限制</strong>这张图适合确认脸部、花纹和项圈；猫身被右侧画框裁断，并与木架相连。制作透明素材前请补充轮廓完整、背景分离的照片。画面外的身体不会自动补画。</p><button type="button" id="photo-framing-add">补充同宠全身照片 ↗</button></div></div>
+              <section class="reference-photo-panel" aria-label="角色补充照片">
+                <div class="reference-photo-heading"><div><strong>补充其他视角</strong><span id="reference-photo-count">目前 1 张 · 最多 4 张</span></div><button type="button" id="add-reference-photos">＋ 添加照片</button><input type="file" id="reference-photo-input" accept="image/png,image/jpeg,image/webp" multiple hidden /></div>
+                <p>照片只保存在本机并随角色卡备份。脸和爪子的动作依据按主照片确认；当前眨眼模型只读取主照片，补充视角不会作为动作输入。</p>
+                <div id="reference-photo-list" class="reference-photo-list" hidden></div>
+              </section>
+              <div class="segmentation-tool"><label class="segmentation-backend-select" id="segmentation-photo-source-wrap" for="segmentation-photo-source" hidden>分割预览照片<select id="segmentation-photo-source" aria-label="选择用于本机分割预览的照片"></select></label><label class="segmentation-backend-select" for="segmentation-backend">本机分割方式<select id="segmentation-backend"><option value="birefnet-local">自动识别 · BiRefNet</option><option value="sam2-local">点选引导 · SAM 2</option></select></label><section class="sam2-prompt" id="sam2-prompt" aria-label="SAM 2 前景和背景点选" hidden><p>先在宠物内部点脸和躯干；可见的爪子或身体可补前景点。背景点选在搁板、暗格等明显背景内部，避开轮廓交界。点位只帮助分割，不会补回画框外被裁掉的身体；提示仅用于这张照片的本次本机推理。</p><div class="sam2-prompt-tools"><button type="button" data-point-label="foreground" aria-pressed="true">＋ 点宠物</button><button type="button" data-point-label="background" aria-pressed="false">－ 点背景</button><button type="button" id="sam2-clear-points">清除点</button><span id="sam2-point-count" aria-live="polite">前景 0 · 背景 0</span></div><div class="sam2-canvas-wrap"><canvas id="sam2-canvas" aria-label="在所选照片上点击添加前景和背景提示点"></canvas></div></section><button class="secondary-button" id="run-segmentation" type="button">预览透明主体 <span>✦</span></button><p id="segmentation-status" role="status">本机分割模型仅做单张静态前景分割；不识别宠物身份或生成动画。照片仅在你点击后发送到本机回环服务，不调用云端；无第三方推理费（会使用本机 GPU 和电力）。连接服务后显示实际模型版本和设备。</p><p class="segmentation-capabilities" id="segmentation-capabilities" hidden></p><div class="segmentation-result" id="segmentation-result" hidden><img id="segmentation-review" alt="完整原图与透明主体在暖色、蓝色和深色背景上的对比预览" /><div class="segmentation-result-meta" id="segmentation-result-meta"></div><div id="segmentation-variants" class="segmentation-variants" role="group" aria-label="SAM 2 候选蒙版" hidden></div><p id="segmentation-quality" class="segmentation-quality" role="status" aria-live="polite"></p><section aria-label="毛边细化比较"><div class="segmentation-editor-tools"><label for="matte-inner">主体内缩 px</label><input id="matte-inner" type="number" min="1" max="20" value="2" /><label for="matte-outer">边缘搜索 px</label><input id="matte-outer" type="number" min="1" max="20" value="10" /><button type="button" id="matte-refine">生成毛边细化候选</button></div><p id="matte-refine-status" role="status">可生成一份毛边细化候选，与当前蒙版比较；不会补全身体。照片和候选仅保存到本机制作目录。</p><div id="matte-comparison" class="segmentation-editor-tools" hidden><button type="button" id="matte-use-original" aria-pressed="true">使用细化前蒙版</button><button type="button" id="matte-use-refined" aria-pressed="false">使用细化候选</button><a id="matte-report" download="matte-refinement-report.json">保存来源报告</a></div></section><button class="segmentation-edit-toggle" id="segmentation-edit-toggle" type="button" aria-expanded="false">手动修整透明边缘 <span>可选 · 本机</span></button><section class="segmentation-editor" id="segmentation-editor" aria-label="手动修整透明蒙版" hidden><p>拖动鼠标擦除误保留的背景，或恢复被误删的宠物区域。每次修整只改透明度；可撤销或重置。编辑图像不会上传。</p><div class="segmentation-editor-tools"><div class="segmentation-edit-modes" role="group" aria-label="蒙版笔刷"><button type="button" data-mask-mode="erase" aria-pressed="true">擦除背景</button><button type="button" data-mask-mode="restore" aria-pressed="false">恢复主体</button></div><label for="segmentation-brush">笔刷 <output id="segmentation-brush-size">36 px</output></label><input id="segmentation-brush" type="range" min="8" max="120" step="4" value="36" /><label for="segmentation-zoom">缩放 <output id="segmentation-zoom-value">100%</output></label><input id="segmentation-zoom" type="range" min="100" max="300" step="25" value="100" /><button id="segmentation-undo" type="button" disabled>撤销</button><button id="segmentation-reset" type="button">重置</button></div><div class="segmentation-canvas-wrap"><canvas id="segmentation-canvas" aria-label="透明蒙版修整画布"></canvas></div><div class="segmentation-editor-foot"><span id="segmentation-edit-status" role="status">尚未修改</span><a class="segmentation-download" id="segmentation-download" download="pet-foreground-candidate.png">保存透明 PNG 候选</a></div></section><button type="button" class="secondary-button" id="package-static-theme">打包为单帧静态待审主题</button><a class="segmentation-download" id="download-static-theme" download="pet-static-candidate.lotheme" hidden>下载待审透明主题</a><p id="static-package-instructions" class="segmentation-quality" hidden>本包仅含一张静态 idle 图。下载后在桌宠系统托盘选择“导入本地主题”，逐项检查暖色、蓝色和深色背景，再自行确认安装或放弃；安装不会补回原照片画框外的身体。</p><a class="segmentation-download" id="segmentation-download-original" download="pet-foreground-candidate.png">保存未修整 PNG 候选</a><small>候选需要人工审核，不会自动替换角色照片或安装成桌宠主题。</small></div></div>
+              <button class="primary-button" id="start-creation"><span>开始制作角色卡</span><span class="button-arrow">→</span></button>
+              <div class="privacy-note"><span>◈</span> 照片只在本机优化、分割与预览，不会上传到远程服务。</div>
+            </div>
+          </section>
+
+          <section class="sam2-video-studio" aria-labelledby="sam2-video-title">
+            <div class="sam2-video-heading"><div><div class="section-overline">FROM PHOTO OR CLIP TO PET ANIMATION</div><h2 id="sam2-video-title">把照片或动作片段做成透明动作</h2><p>从当前照片试做眨眼，或选择一段本机视频；核对身份和动作后，在首帧点选宠物，用 SAM 2.1 传播轮廓。只向本机服务发送抽取出的 512px 静音帧。</p></div><span class="sam2-video-local">仅限本机 · 必须人工审核</span></div>
+            <div class="sam2-video-role-context" id="sam2-video-role-context" hidden><img id="sam2-video-role-photo" alt="当前角色参考照片" /><div><strong id="sam2-video-role-title"></strong><p id="sam2-video-role-prompt"></p><label><input id="sam2-video-role-confirm" type="checkbox" />我已对照参考照片，确认视频主体是当前角色且动作与计划相符</label><small>此确认只允许制作待审候选；身份、动作和透明边缘仍要在 190px 预览中复查。</small></div><button class="secondary-button" id="sam2-video-role-exit" type="button">退出此角色制作</button></div>
+            <div class="photo-motion-panel" aria-labelledby="photo-motion-title">
+              <div class="photo-motion-heading"><div><strong id="photo-motion-title">从当前照片试做眨眼</strong><p>本机 LivePortrait 使用固定眨眼驱动，可调节驱动幅度和取景范围；不解释自由 Prompt。X-Pose 仅限非商业科研。输出带原背景，需继续分割并核对身份、动作和边缘。</p></div><div class="photo-motion-actions"><label for="photo-wink-strength">驱动幅度 <span class="photo-wink-strength-control"><input id="photo-wink-strength" type="range" min="0.50" max="2.00" step="0.05" value="1.50"/><output id="photo-wink-strength-value" for="photo-wink-strength">1.50×</output></span></label><label for="photo-wink-source-scale">取景范围 <span class="photo-wink-strength-control"><input id="photo-wink-source-scale" type="range" min="2.3" max="3.2" step="0.1" value="2.8"/><output id="photo-wink-source-scale-value" for="photo-wink-source-scale">2.8×</output></span></label><label class="photo-wink-composition"><input id="photo-wink-preserve-body" type="checkbox"/> 保留完整照片轮廓（主照片须已确认全身，仍带背景）</label><button class="secondary-button" id="photo-wink-run" type="button" disabled>从照片生成眨眼预览</button></div></div>
+              <div class="photo-wink-framing-controls"><button class="secondary-button" id="photo-wink-framing-prepare" type="button" disabled>按透明轮廓准备全身取景</button><span>先在上方分割当前主照片并核对完整轮廓。取景只减少画面留白，不能补回被照片截掉的身体。</span></div>
+              <div class="photo-wink-framing-review" id="photo-wink-framing-review" hidden><img id="photo-wink-framing-image" alt="当前照片与保留完整主体的取景对照" /><div><label><input id="photo-wink-framing-confirm" type="checkbox" />我已对照原照，确认耳朵、身体、可见爪子和尾巴没有被取景裁掉</label><p id="photo-wink-framing-note" role="status"></p><button class="secondary-button" id="photo-wink-framing-cancel" type="button">取消本次取景</button></div></div>
+              <label class="photo-wink-manual-toggle"><input id="photo-wink-manual-mode" type="checkbox" />改用手工九点面部标注（本机待审路线，跳过 X-Pose 检测）</label>
+              <div class="photo-wink-manual-panel" id="photo-wink-manual-panel" hidden><div><strong>依次点选当前照片的九个面部位置</strong><p id="photo-wink-manual-step" role="status"></p><canvas id="photo-wink-manual-canvas" aria-label="当前宠物照片的九点面部标注画布"></canvas></div><div><p>按画面方向依次标左眼外侧、左眼内侧、右眼内侧、右眼外侧、鼻尖、左口角、右口角、上唇中点、下唇中点。脸太小时先放大再标注。同一照片可打开已保存的点位；换照片须另行标注。重开点位后请重新核对，也可只修正某一点。这不补出缺失的身体，也不批准候选。</p><button class="secondary-button" id="photo-wink-manual-zoom" type="button">放大脸部区域</button><button class="secondary-button" id="photo-wink-manual-undo" type="button">撤销上一点</button><button class="secondary-button" id="photo-wink-manual-clear" type="button">重新标注</button><label><input id="photo-wink-manual-confirm" type="checkbox" disabled />我已核对九点的位置与当前照片一致</label></div></div>
+              <label class="photo-wink-license-consent"><input id="photo-wink-license-consent" type="checkbox" /><span>我已查看 <a href="https://github.com/IDEA-Research/X-Pose/blob/master/LICENSE.txt" target="_blank" rel="noopener noreferrer">X-Pose 官方许可证</a>，并确认这次只用于非商业科研；不用于商业、色情、军事或监控用途。</span></label>
+              <p id="photo-wink-evidence-note" class="photo-wink-evidence-note">先确认 X-Pose 的科研许可范围，才能启用本机眨眼生成。</p>
+              <p id="photo-wink-plan-note" role="status" hidden></p><p id="photo-wink-status" role="status">只处理当前角色照片；不发送到远程服务，不自动安装。</p>
+              <div class="photo-motion-result" id="photo-wink-result" hidden><img id="photo-wink-review" alt="原照片与六帧本机生成眨眼视频的身份对照" /><div><video id="photo-wink-video" controls muted playsinline aria-label="从当前照片生成的眨眼视频"></video><span id="photo-wink-meta"></span><button class="secondary-button" id="photo-wink-use" type="button">用这段视频继续分割 →</button></div></div>
+              <section class="photo-motion-history" id="photo-wink-history" aria-labelledby="photo-wink-history-title" hidden><div><strong id="photo-wink-history-title">这张照片的眨眼候选</strong><span id="photo-wink-history-count"></span></div><p>可找回本机保留的视频继续审核。浏览器只记照片指纹、候选编号和参数；删除工作区文件后，该候选将无法恢复。</p><div class="photo-motion-history-grid" id="photo-wink-history-grid"></div></section>
+            </div>
+            <section class="wan-motion-panel" aria-labelledby="wan-motion-title">
+              <h3 id="wan-motion-title">用完整角色锚图生成动作候选 <small>Wan 2.2 · 本机待审</small></h3>
+              <p>提供独立的透明全身角色锚图（RGBA PNG）。模型只以锚图作为画面条件；当前照片用于来源记录与人工身份对照，不会作为第二路模型条件。画外身体仍是推断；生成后需核对身份与动作，再进入透明分割。原照、锚图及候选留在本机工作区。</p>
+              <div class="wan-anchor-tools"><button class="secondary-button" id="wan-use-segmentation" type="button">使用上方已检查的透明单图候选</button><p id="wan-anchor-source-note" role="status">完整、无遮挡且已确认单宠的照片，可先在单图分割区生成并修整透明候选，再带到这里。裁切照片不能靠修边恢复画外身体。</p></div>
+              <div class="wan-motion-fields"><label>透明角色锚图 <input id="wan-anchor-file" type="file" accept="image/png" /></label><label>物种 <select id="wan-species"><option value="cat">猫</option><option value="dog">狗</option></select></label><label>来源与不确定性 <textarea id="wan-source-coverage" rows="2" maxlength="500" placeholder="哪些部位来自照片？哪些身体部位由 AI 推断？"></textarea></label><label>动作 Prompt（按当前动作生成，可编辑） <textarea id="wan-positive" rows="6" maxlength="4000" placeholder="描述同一只宠物的动作、幅度、身份标记和固定镜头"></textarea></label><label>避免项（负向） <textarea id="wan-negative" rows="2" maxlength="4000">changed identity, extra limbs, missing paws, whole-body sliding, rotating the entire cutout, distorted eyelids, flicker, jump cuts, cropped body, camera motion, zoom, background objects, text, watermark</textarea></label></div>
+              <div class="wan-anchor-review" id="wan-anchor-review" hidden><strong>190px 透明锚图检查 · 暖色 / 蓝色 / 深色</strong><div><canvas id="wan-anchor-warm" width="190" height="254" aria-label="暖色背景锚图"></canvas><canvas id="wan-anchor-blue" width="190" height="254" aria-label="蓝色背景锚图"></canvas><canvas id="wan-anchor-dark" width="190" height="254" aria-label="深色背景锚图"></canvas></div><p id="wan-anchor-review-note"></p><label><input id="wan-anchor-confirm" type="checkbox" />我已对照原照片检查身份、完整轮廓、解剖和透明边缘；推断部位已写入来源说明</label></div>
+              <button class="secondary-button" id="wan-run" type="button">生成 RGB 待审视频</button><p id="wan-status" role="status">需要本机 ComfyUI 和 Wan 2.2 模型；不会自动安装主题。</p>
+              <div class="wan-motion-result" id="wan-result" hidden><img id="wan-review" alt="输入锚图与 190px 视频关键帧对照" /><video id="wan-video" controls muted playsinline loop aria-label="Wan 2.2 正常速度动作候选"></video><div class="wan-motion-focus" id="wan-motion-focus" hidden><strong>动作变化最明显的区域 · 放大检查</strong><a id="wan-motion-zoom-open" target="_blank" rel="noopener"><img id="wan-motion-zoom" alt="视频动作区域变化最大的三帧与首、中、末帧放大对照" /></a><p>按逐帧 RGB 变化自动取景。请检查多余肢体、模糊变形和末帧；自动取景不代表质量通过。</p></div><p id="wan-meta"></p><fieldset id="wan-rgb-checks"><legend>RGB 阶段视觉审核</legend><label><input type="checkbox" data-wan-check="identity" />脸、花纹、眼睛和配饰保持同一只宠物</label><label><input type="checkbox" data-wan-check="anatomy" />身体与四肢没有新增、缺失或变形</label><label><input type="checkbox" data-wan-check="motion" />190px 正常速度下动作清楚且节奏自然</label><label><input type="checkbox" data-wan-check="frame" />主体始终在画框内，起止帧可衔接</label></fieldset><button class="secondary-button" id="wan-use" type="button" disabled>用这段视频继续透明分割 →</button><p>确认仅允许进入 SAM 2 待审流程；分割后的五项审核和桌面主题安装门槛仍独立执行。</p></div>
+            </section>
+            <div class="sam2-video-controls"><input id="sam2-video-file" type="file" accept="video/mp4,video/webm" hidden /><button class="secondary-button" id="sam2-video-choose" type="button">选择动作视频</button><label for="sam2-video-fps">采样帧率<select id="sam2-video-fps"><option value="15">15 fps</option><option value="20">20 fps</option><option value="25" selected>25 fps</option><option value="30">30 fps</option></select></label><span id="sam2-video-file-info" role="status">支持 MP4 / WebM；最多 120 帧，画面完整适配为 512×512。</span></div>
+            <div class="sam2-video-source" id="sam2-video-source" hidden><video id="sam2-video-player" controls playsinline muted preload="metadata" aria-label="动作源视频预览"></video><div class="sam2-video-prompt"><div class="sam2-video-instructions"><strong>在第一帧标记主体</strong><span>点橘子作为前景；必要时点背景。画面按比例留边，不会裁切视频内容。</span></div><div class="sam2-video-prompt-tools"><button type="button" data-video-point-label="foreground" aria-pressed="true">＋ 宠物前景</button><button type="button" data-video-point-label="background" aria-pressed="false">－ 背景</button><button type="button" id="sam2-video-clear-points">清除点</button><span id="sam2-video-point-count" aria-live="polite">前景 0 · 背景 0</span></div><div class="sam2-video-canvas-wrap"><canvas id="sam2-video-canvas" width="512" height="512" aria-label="在动作视频首帧点选前景和背景"></canvas></div></div></div>
+            <button class="primary-button sam2-video-run" id="sam2-video-run" type="button" disabled>生成分割预览和审核包 <span class="button-arrow">→</span></button><p class="sam2-video-status" id="sam2-video-status" role="status">尚未选择视频。首次处理前会检查本机服务；点击生成后才抽取和发送视频帧，不发送音轨。</p>
+            <div class="sam2-video-result" id="sam2-video-result" hidden><div class="sam2-video-result-head"><div><strong id="sam2-video-result-title">待审核视频候选</strong><span id="sam2-video-result-meta"></span></div><span>结构校验不等于视觉通过</span></div><div class="sam2-video-previews"><div><h3 id="sam2-video-loop-title">透明动作 · 蓝色背景</h3><img id="sam2-video-loop" alt="猫咪动作的 190px 正常速度透明动画预览" /><a id="sam2-video-loop-download" download="pet-animation-review.gif">下载 190px 动画预览</a></div><div><h3>边缘检查 · 暖色 / 蓝色背景</h3><img id="sam2-video-contact" alt="动作候选在暖色和蓝色背景上的重点帧对比" /><a id="sam2-video-contact-open" target="_blank" rel="noopener">打开完整尺寸审核图 ↗</a></div></div><section class="sam2-frame-inspector" aria-labelledby="sam2-frame-title"><div class="sam2-frame-head"><strong id="sam2-frame-title">逐帧透明检查</strong><span id="sam2-frame-count">第 1 / 1 帧</span></div><div class="sam2-frame-controls"><button type="button" id="sam2-frame-prev">上一帧</button><input id="sam2-frame-range" type="range" min="1" max="1" value="1" aria-label="选择透明审核帧" /><button type="button" id="sam2-frame-next">下一帧</button></div><div class="sam2-frame-focus" id="sam2-frame-focus"></div><div class="sam2-frame-backgrounds"><div class="warm"><img data-frame-background="warm" alt="当前帧在暖色背景" /></div><div class="blue"><img data-frame-background="blue" alt="当前帧在蓝色背景" /></div><div class="dark"><img data-frame-background="dark" alt="当前帧在深色背景" /></div></div><p id="sam2-frame-status" role="status">选择任意帧查看 190px 三背景；审核仍须结合正常速度播放。</p></section><fieldset class="sam2-video-visual-review" id="sam2-video-visual-review"><legend>逐项审核 · 对照正常速度、逐帧透明图和重点帧</legend><label><input type="checkbox" data-video-review="identity">整段动作中始终是同一只宠物，花纹和可见特征稳定</label><label><input type="checkbox" data-video-review="motion">动作意图清楚，符合角色计划</label><label><input type="checkbox" data-video-review="anatomy">身体结构合理，没有重影、穿插或异常变形</label><label><input type="checkbox" data-video-review="timing">起势、动作、收势自然，循环没有明显跳变</label><label><input type="checkbox" data-video-review="edge">主体未被意外裁切/遮挡，透明边缘没有明显背景残留</label><p id="sam2-video-visual-review-status" role="status">五项全部确认后，才可带入角色或导出待审包；确认仍由你负责，不代表系统自动判定通过。</p></fieldset><div class="sam2-video-package"><span id="sam2-video-package-status"></span><a id="sam2-video-package-download" download="pet-theme-candidate.lotheme">下载本地主题包</a></div><div class="sam2-video-role-link"><span id="sam2-video-role-note">将这段动作与当前照片并排审核，并记录到角色卡；这一步不会安装素材。</span><button class="secondary-button" id="sam2-video-to-workshop" type="button">带入角色工坊审核 →</button></div><p class="sam2-video-review-note">安装前请在 190px 正常速度检查身份、动作、遮挡与透明边缘。主题包不会自动安装；服务输出留在工作区 <code>generated/sam2-video-studio</code>，原视频和音轨不会保留。</p></div>
+            <section class="sam2-video-history" id="sam2-video-history" aria-labelledby="sam2-video-history-title" hidden><div class="sam2-video-history-head"><div><h3 id="sam2-video-history-title">同一视频的候选对比</h3><p id="sam2-video-history-note">调整提示点或帧率后再次生成，可以并排比较。本机保存视频指纹、候选参数；从角色工坊发起时，也会保存角色动作、描述、确认特征和照片指纹，不保存原照片或原视频。</p></div><span id="sam2-video-history-count"></span></div><div class="sam2-video-history-grid" id="sam2-video-history-grid"></div></section>
+          </section>
+          <section class="lower-grid">
+            <div class="steps-card">
+              <div class="section-heading"><div><div class="section-overline">YOUR CREATION JOURNEY</div><h3>把灵感变成陪伴</h3></div><button class="text-link" id="how-it-works">了解流程 <span>↗</span></button></div>
+              <div class="journey-steps"><div class="journey-step done"><div class="step-number">01</div><div><strong>认识它</strong><span>照片与角色特征</span></div><span class="step-check">✓</span></div><div class="journey-connector"></div><div class="journey-step"><div class="step-number">02</div><div><strong>设计动作</strong><span>挑选喜欢的小习惯</span></div><span class="step-lock">○</span></div><div class="journey-connector"></div><div class="journey-step"><div class="step-number">03</div><div><strong>桌面相见</strong><span>预览、确认、带回家</span></div><span class="step-lock">○</span></div></div>
+            </div>
+            <div class="inspiration-card"><div class="inspo-decoration">✳</div><div class="section-overline">A GENTLE REMINDER</div><h3>先从它本来的样子开始。</h3><p>你可以随时加入新的风格和想象。每一次改变，都由你来决定。</p><div class="inspo-footer"><span>身份锚点由你确认</span><span>✦</span></div></div>
+          </section>
+          <footer class="page-footer"><span>MADE WITH A LITTLE LOVE</span><span>所有创作都从你的选择开始 <b>✳</b></span></footer>
+        </div>
+      </main>
+
+      <main class="main-area archive-page" id="characters-page" hidden>
+        <header class="topbar">
+          <div class="breadcrumb"><span>工作室</span><i>/</i><strong id="archive-breadcrumb">我的角色</strong></div>
+          <div class="top-actions"><span class="saved-status"><span></span> 仅保存在本地</span><span class="avatar-mini" aria-hidden="true">M</span></div>
+        </header>
+        <div class="page-content archive-content">
+          <section class="welcome-row archive-welcome">
+            <div><div class="eyebrow"><span class="eyebrow-star">✳</span> YOUR LITTLE UNIVERSE</div><h1>你们的故事，<em>从这里继续。</em></h1><p class="welcome-subtitle">管理已确认的角色卡，继续创作，或打开桌面尺寸预览。</p></div>
+            <div class="archive-controls"><span class="archive-count" id="archive-count">本地角色 · 00</span><button class="primary-button archive-new-button" id="new-character">新建角色 <span class="button-arrow">+</span></button></div>
+          </section>
+          <section class="character-library" id="character-library" aria-label="已保存的角色">
+            <div class="character-grid" id="character-grid"></div>
+          </section>
+          <section class="collection-empty" id="collection-empty" hidden>
+            <div class="empty-mark">♡</div><h2>这里还没有保存的角色</h2><p>从这张猫咪参考照开始，确认外观后保存第一张角色卡。</p><button class="primary-button" id="new-character-from-empty">从照片开始 <span class="button-arrow">→</span></button>
+          </section>
+          <footer class="page-footer"><span>MADE WITH A LITTLE LOVE</span><span>角色照片与确认信息保存在此设备 <b>✳</b></span></footer>
+        </div>
+      </main>
+    </div>
+
+    <template id="character-card-template">
+      <article class="character-card">
+        <div class="character-card-media"><img data-role="photo" src="./reference-cat.jpg" alt="" /><span class="character-state">本地已确认</span><button class="media-preview-button" data-action="preview">打开 190px 预览</button></div>
+        <div class="character-card-body">
+          <div class="collection-meta"><span data-role="mode"></span><span>LOCAL ONLY</span></div>
+          <h2 data-role="name"></h2>
+          <p class="collection-section-label">你确认的可见特征</p>
+          <ul class="collection-traits" data-role="traits"></ul>
+          <p class="collection-evidence" data-role="source-evidence"></p>
+          <div class="collection-divider"></div>
+          <p class="collection-section-label">动作创作计划</p>
+          <div class="collection-action"><strong data-role="action"></strong><p data-role="prompt"></p></div>
+          <div class="collection-runtime"><span data-role="runtime-status"><i></i>动作素材尚未生成</span><span data-role="version-status">尚无旧版本</span></div>
+          <div class="collection-actions"><button class="secondary-button" data-action="preview">打开预览</button><button class="secondary-button" data-action="restore-version">版本历史</button><button class="primary-button" data-action="edit">继续创作 <span class="button-arrow">→</span></button></div>
+        </div>
+      </article>
+    </template>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <dialog id="creation-dialog" class="creation-dialog">
+      <button class="dialog-close" data-close-dialog aria-label="关闭">×</button>
+      <div class="dialog-progress"><span class="progress-active"></span><span></span><span></span></div>
+      <div class="dialog-eyebrow">STEP 01 · YOUR CHARACTER</div>
+      <div class="dialog-layout"><div class="dialog-image-wrap"><img id="dialog-image" src="./reference-cat.jpg" alt="角色参考图" /><span class="image-note">本地照片预览</span></div><div class="dialog-details"><div class="dialog-overline">MEET YOUR LITTLE FRIEND</div><h2><span id="dialog-name">橘子</span><span class="name-edit">✎</span></h2><p class="dialog-subtitle" id="dialog-subtitle">一只真实宠物 · 特征由你确认</p><div class="traits-title" id="traits-title">从照片中能看到的特征 <span>请确认后再继续</span></div><div class="trait-list"><label><input type="checkbox" checked /><span class="custom-check">✓</span> 橘白相间的短毛</label><label><input type="checkbox" checked /><span class="custom-check">✓</span> 粉色鼻头与圆眼睛</label><label><input type="checkbox" checked /><span class="custom-check">✓</span> 脖子上戴着项圈</label></div><fieldset class="source-evidence"><legend>动作依据与轮廓来源</legend><p>脸和爪子的动作依据按主照片确认；当前眨眼模型只读取主照片。完整身体轮廓可结合整组照片确认。</p><div class="source-evidence-grid"><label><input type="checkbox" data-evidence-part="face" checked />脸和双耳</label><label><input type="checkbox" data-evidence-part="frontPaws" checked />前爪</label><label><input type="checkbox" data-evidence-part="rearPaws" />后爪</label><label><input type="checkbox" data-evidence-part="tail" />尾巴</label><label><input type="checkbox" data-evidence-part="fullSilhouette" />完整身体轮廓</label></div><p id="source-evidence-note" role="note">这张样例的身体右侧被裁切，尾巴和后爪不可验证；全身候选必须标为推断版本并单独审核。</p></fieldset><div class="uncertainty-note"><span>✦</span><p id="trait-note">只记录照片中能确认的部分。被遮挡的身体区域不会自动补全。</p></div><div class="dialog-actions"><button class="secondary-button" data-close-dialog>先看看照片</button><button class="primary-button" id="continue-to-workshop">确认特征，设计动作 <span class="button-arrow">→</span></button></div></div></div>
+    </dialog>
+
+    <dialog id="workshop-dialog" class="creation-dialog workshop-dialog">
+      <button class="dialog-close" data-close-dialog aria-label="关闭">×</button>
+      <div class="dialog-progress"><span class="progress-active"></span><span class="progress-active"></span><span></span></div>
+      <div class="dialog-eyebrow">STEP 02 · CREATIVE WORKSHOP</div>
+      <div class="workshop-head"><div><div class="dialog-overline">MAKE IT YOURS</div><h2 id="workshop-heading">给橘子设计一个小动作</h2><p>先选一个动作灵感，再写下你想要的感觉。</p></div><span class="workshop-chip" id="workshop-chip">真实宠物 · 身份保护开启</span></div>
+      <div class="workshop-grid"><div class="action-choices"><div class="traits-title">挑选一个动作 <span>低幅度更容易保持神态</span></div><div class="action-cards"><button class="action-choice active" data-action="眨眨眼"><span class="action-emoji">😉</span><strong>眨眨眼</strong><small>轻柔 · 约 2 秒</small><span class="choice-check">✓</span></button><button class="action-choice" data-action="歪头看看"><span class="action-emoji">🐱</span><strong>歪头看看</strong><small>好奇 · 约 3 秒</small><span class="choice-check">✓</span></button><button class="action-choice" data-action="打个招呼"><span class="action-emoji">👋</span><strong>打个招呼</strong><small>友好 · 局部动作</small><span class="choice-check">✓</span></button></div><label class="traits-title prompt-label" for="prompt-input">加一点你的想象 <span>可以随时修改</span></label><textarea id="prompt-input" rows="3" placeholder="比如：像刚睡醒一样，慢慢眨一下眼睛……">像刚睡醒一样，慢慢眨一下眼睛，保留它原来的眼睛和花纹。</textarea><div class="local-plan"><span>✳</span><div><strong>本地创作草稿</strong><small id="plan-description">局部表情 · 保留身份特征 · 透明背景 · 低幅动作</small></div><span class="plan-status" id="plan-status">待生成</span></div><section class="prompt-plan-preview" aria-label="Prompt 路线预检"><strong>描述路线预检 <small>本机规则检查 · 非 AI 生成</small></strong><p><span>动作范围</span><b id="prompt-plan-scope">局部表情</b></p><p><span>可用制作路线</span><b id="prompt-plan-route">本机眨眼模板（受 X-Pose 许可限制）</b></p><p id="prompt-plan-warning" role="status" hidden></p></section><section class="ai-plan" aria-label="AI 动作计划"><strong>AI 整理动作计划 <small>文字计划 · 不生成素材</small></strong><p>明确同意后，当前动作描述和已勾选特征会发送给 OpenAI Codex CLI；不发送照片。会使用当前账号用量，单次费用无法预估。计划仅供编辑和审核，不会批准主题。</p><label><input id="ai-plan-consent" type="checkbox" />我同意发送上述文字，生成一份待审动作计划</label><button class="secondary-button" id="ai-plan-run" type="button" disabled>生成文字计划</button><p id="ai-plan-status" role="status">本机计划服务未检查。</p><div id="ai-plan-result" hidden><label for="ai-plan-edit">动作计划（可编辑）</label><textarea id="ai-plan-edit" rows="6" maxlength="1200"></textarea><p id="ai-plan-route"></p><button class="secondary-button" id="ai-plan-apply" type="button">用编辑后的计划替换动作描述</button><button class="secondary-button" id="ai-wink-apply" type="button" hidden>把建议幅度用于本机眨眼</button><p id="ai-wink-apply-status" role="status"></p></div></section></div><aside class="workshop-preview" id="workshop-preview"><div class="preview-top"><span>桌面尺寸预览</span><span>190 px</span></div><div class="preview-stage"><div class="preview-shelf"></div><img id="workshop-image" src="./reference-cat.jpg" alt="角色桌面预览" /><img id="workshop-candidate-image" alt="待审动作候选的 190px 动画" hidden /><div class="preview-sparkle">✦</div><div class="preview-caption">角色 <span>·</span> 正在等你</div></div><div class="preview-foot"><span><i></i> <span id="workshop-preview-status">静态照片预览</span></span><span id="workshop-preview-detail">还未生成动作</span></div></aside></div>
+      <p class="action-evidence-note" id="action-evidence-note" role="status">脸部已确认可见；本机可试做待审眨眼，透明边缘仍需单独审核。</p>
+      <section class="workshop-candidate-review" id="workshop-candidate-review" hidden><div><strong>已关联待审动作候选</strong><p id="workshop-candidate-meta"></p><p id="workshop-candidate-note">对照上一步确认的角色照片，检查是否为同一只宠物、动作是否相符、裁切与透明边缘是否合格。保存角色卡不会安装或批准这段素材。</p></div><div><a id="workshop-candidate-edge" target="_blank" rel="noopener">查看暖色 / 蓝色边缘图 ↗</a><button class="secondary-button" type="button" id="workshop-candidate-remove">从角色草稿移除</button></div></section>
+      <div class="workshop-bottom"><button class="secondary-button" data-close-dialog>稍后再做</button><button class="secondary-button" id="workshop-to-video" type="button">从照片试做眨眼或用已有视频</button><button class="primary-button" id="request-generation">保存角色卡，打开预览 <span class="button-arrow">→</span></button></div>
+      <div class="backend-notice" id="backend-notice"><span>ⓘ</span><span id="backend-notice-text">尚未接入从角色照片直接生成动作的服务。你可保存角色卡，并用已有视频制作待审候选；桌面仍使用静态照片回退。</span></div>
+    </dialog>
+
+    <dialog id="pet-dialog" class="pet-dialog"><button class="dialog-close" data-close-dialog aria-label="关闭">×</button><div class="pet-dialog-title" id="pet-title"><span class="live-indicator"></span> 桌面预览 · 橘子 <span class="preview-resolution">190 px</span></div><div class="pet-desktop"><div class="desktop-window"><div class="window-dot"></div><div class="window-dot"></div><div class="window-dot"></div><span>My little desktop</span><div class="window-line"></div></div><button class="pet-figure" id="pet-figure" aria-label="点击橘子互动"><img id="pet-modal-image" src="./reference-cat.jpg" alt="橘子的桌面宠物" /><span id="pet-speech">你好呀</span></button><div class="desktop-shelf"></div><div class="pet-hint">试试点一点它 <span>↗</span></div></div><div class="pet-controls"><span><i></i> 照片静态回退</span><button id="pet-interact">和橘子互动 <span>♡</span></button></div><div class="pet-dialog-foot" id="pet-dialog-foot">已保存到本地角色卡 · 动作生成服务尚未配置</div></dialog>
+    <dialog id="reference-photo-identity-dialog" class="reference-identity-dialog" aria-labelledby="reference-identity-title">
+      <button class="dialog-close" data-close-dialog aria-label="关闭">×</button>
+      <h2 id="reference-identity-title">核对是不是同一只宠物</h2>
+      <p>设为主照片后，后续生成会以新照片为输入。请对照脸、花纹和配饰；仅凭物种或毛色相似不够。</p>
+      <div class="reference-identity-pair"><figure><img id="reference-identity-current" alt="当前主照片" /><figcaption>当前主照片</figcaption></figure><figure><img id="reference-identity-next" alt="准备设为主照片的补充照片" /><figcaption id="reference-identity-next-name">补充照片</figcaption></figure></div>
+      <label class="reference-identity-check"><input id="reference-identity-confirm" type="checkbox" />我已人工核对，确认两张照片是同一只宠物</label>
+      <div class="reference-identity-actions"><button id="reference-identity-cancel" type="button" class="secondary-button">保留当前主照片</button><button id="reference-identity-apply" type="button" class="primary-button" disabled>设为主照片</button></div>
+    </dialog>
+    <dialog id="role-rollback-dialog" class="role-rollback-dialog">
+      <button class="dialog-close" data-close-dialog aria-label="关闭">×</button>
+      <div class="settings-eyebrow">LOCAL VERSION RECOVERY</div>
+      <h2>角色版本历史</h2>
+      <p class="role-rollback-intro" id="role-rollback-intro">选择一版，核对照片和动作后再恢复。</p>
+      <div id="role-history-list" class="role-history-list" aria-label="可恢复的角色版本"></div>
+      <div class="role-rollback-candidate"><img id="role-rollback-image" src="./reference-cat.jpg" alt="旧版本照片" /><div><strong id="role-rollback-name"></strong><span id="role-rollback-mode"></span><span id="role-rollback-action"></span><span id="role-rollback-review-candidate"></span></div></div>
+      <p class="role-rollback-note">恢复会把当前版本也存入历史。最多保留 10 个不同的历史版本，仅保存在此浏览器。</p>
+      <label class="role-rollback-check"><input type="checkbox" id="role-rollback-confirmed" /><span>我已检查照片与版本信息，确认恢复</span></label>
+      <div class="settings-actions"><button class="secondary-button" data-close-dialog>保留当前版本</button><button class="primary-button" id="confirm-role-rollback" disabled>恢复此版本 <span class="button-arrow">↶</span></button></div>
+    </dialog>
+    <dialog id="settings-dialog" class="settings-dialog">
+      <button class="dialog-close" data-close-dialog aria-label="关闭">×</button>
+      <div class="settings-eyebrow">YOUR COMFORT, YOUR RULES</div><h2>陪伴偏好</h2>
+      <p class="settings-intro">网页预览偏好保存在浏览器，与桌面端设置分开保存。</p>
+      <div class="preference-row"><div><strong>本地点击互动</strong><span>点击时显示轻轻的弹跳和一句回应</span></div><label class="switch"><input id="interaction-enabled" type="checkbox" checked /><span></span></label></div>
+      <div class="preference-row"><div><strong>允许桌面自动动作</strong><span>默认关闭；开启后仍需桌面端安装逐项审核过的动作素材</span></div><label class="switch"><input id="automatic-actions-enabled" type="checkbox" /><span></span></label></div>
+      <div class="preference-row"><div><strong>安静时段</strong><span>安静时段内不自动触发陪伴动作</span></div><label class="switch"><input id="quiet-enabled" type="checkbox" /><span></span></label></div>
+      <div class="quiet-time-fields" id="quiet-time-fields"><label>从 <input id="quiet-start" type="time" value="22:00" /></label><label>到 <input id="quiet-end" type="time" value="08:00" /></label></div>
+      <div class="frequency-setting"><div class="frequency-heading"><strong>自动动作频率</strong><span>桌面端每到间隔检查一次，遵守安静时段</span></div><div class="frequency-control"><input id="frequency-range" type="range" min="5" max="30" step="5" value="15" /><output id="frequency-value">每 15 分钟</output></div></div>
+      <section class="model-status-card" id="local-backend-status" data-state="unknown" aria-labelledby="local-backend-title">
+        <div class="model-status-head"><div><strong id="local-backend-title">本机创作能力</strong><span>只读取本机能力声明；不会发送照片。</span></div><button class="status-refresh" id="refresh-backend-status" type="button">检查</button></div>
+        <ul class="backend-capability-list" id="backend-capability-list" aria-live="polite"><li>打开偏好设置时检查本机服务。</li></ul>
+        <span class="status-offline" id="backend-status-badge">未检查</span>
+      </section>
+      <div class="backup-controls"><button id="export-card">↓ 准备角色卡备份</button><button id="import-card">↑ 导入角色卡备份</button><input type="file" id="import-file" accept="application/json,.json" hidden /></div>
+      <div id="export-card-ready" class="backup-export-ready" hidden><a id="export-card-download" download>下载角色卡备份</a><span>备份已准备好，点击上方链接保存到本地。</span></div>
+      <div class="backup-controls"><button id="export-preferences">↓ 准备桌面偏好备份</button><button id="import-preferences">↑ 导入桌面偏好备份</button><input type="file" id="preferences-file" accept="application/json,.json" hidden /></div>
+      <div id="export-preferences-ready" class="backup-export-ready" hidden><a id="export-preferences-download" download="little-orbit.preferences.json">下载桌面偏好备份</a><span>备份已准备好，点击链接保存 JSON 文件。</span></div>
+      <div class="settings-actions"><button class="secondary-button" data-close-dialog>取消</button><button class="primary-button" id="save-settings">保存偏好 <span class="button-arrow">✓</span></button></div>
+      <div class="settings-local-note">偏好保存在本机浏览器；导出 v2 桌面偏好备份后，可从系统托盘导入。网页预览不会自动播放动作。</div>
+    </dialog>
+    <div class="overlay-hint" id="overlay-hint">选择一个动作后，可保存角色卡并打开 190px 本地预览</div>
+    <script src="./theme-frame-player.js"></script>
+    <script src="./app.js?v=20261006.2"></script>
+    <link rel="stylesheet" href="./simple-ui.css" />
+    <script src="./simple-ui.js"></script>
+  </body>
+</html>
