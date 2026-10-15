@@ -6,6 +6,7 @@ No real Codex configuration or task transcripts are changed.
 from __future__ import annotations
 import argparse
 import base64
+from datetime import datetime, timezone, timedelta
 import json
 import os
 from pathlib import Path
@@ -124,6 +125,42 @@ def main() -> None:
             with rollout.open('a', encoding='utf-8') as stream:
                 stream.write(json.dumps(record, separators=(',', ':')) + '\n')
             wait_state(state, 'click' if state == 'finished' else None)
+        # Observed desktop async-input format: only the matching successful UI acknowledgement counts.
+        def response(payload, timestamp=None, path=rollout):
+            record = {'timestamp': timestamp or datetime.now(timezone.utc).isoformat(),
+                      'type': 'response_item', 'payload': payload}
+            with path.open('a', encoding='utf-8') as stream:
+                stream.write(json.dumps(record, separators=(',', ':')) + '\n')
+        def input_call(call, timestamp=None, path=rollout):
+            response({'type': 'function_call', 'call_id': call, 'name': 'request_user_input_async',
+                'arguments': '{"questions":[{"title":"PRIVATE-QUESTION-MUST-NOT-PERSIST"}]}',
+                'internal_chat_message_metadata_passthrough': {'turn_id': turn}}, timestamp, path)
+        def input_output(call, accepted=True, path=rollout):
+            response({'type': 'function_call_output', 'call_id': call,
+                      'output': json.dumps({'accepted': accepted})}, path=path)
+        response({'type': 'message', 'role': 'assistant', 'content': [{'type':'output_text',
+            'text': 'request_user_input_async accepted PRIVATE-QUESTION-MUST-NOT-PERSIST?'}]})
+        input_call('call_failed'); input_output('call_failed', False)
+        input_output('call_unknown')
+        stale = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
+        input_call('call_stale', stale); input_output('call_stale')
+        foreign = sessions / ('rollout-2026-10-16T00-00-00-' + str(uuid.uuid4()) + '.jsonl')
+        input_call('call_foreign', path=foreign); input_output('call_foreign', path=foreign)
+        time.sleep(1.2)
+        assert snapshot()['lastState'] == 'finished', snapshot()
+        input_call('call_pending')
+        time.sleep(.8)
+        assert snapshot()['lastState'] == 'finished', 'a request attempt is not a displayed question'
+        input_output('call_pending')
+        needs_user = wait_state('needs-user', 'needs-user')
+        # A duplicate result has no matching pending call and cannot enqueue another event.
+        events = data / 'codex-events'
+        count = len(list(events.glob('*.event.json')))
+        input_output('call_pending')
+        time.sleep(.8)
+        assert len(list(events.glob('*.event.json'))) == count
+        for path in events.glob('*.event.json'):
+            assert 'PRIVATE-' not in path.read_text(encoding='utf-8')
         for path in (data / 'ai-events').glob('*.json'):
             text = path.read_text(encoding='utf-8')
             assert 'PRIVATE-' not in text and sid not in text
@@ -133,6 +170,8 @@ def main() -> None:
                   'customFinishMapping': True, 'runningPersists': True, 'foreignSessionIgnored': True,
                   'disconnectedIgnoresHooks': True, 'desktopLifecycleMapping': True,
                   'unrelatedHooksPreserved': True, 'legacyHooksMigrated': True, 'mixedHookGroupPreserved': True,
+                  'desktopDisplayedInput': needs_user, 'failedOrUnmatchedQuestionsIgnored': True,
+                  'staleOrForeignQuestionsIgnored': True, 'ordinaryTextIgnored': True,
                   'reinstallIdempotent': True, 'privatePayloadDiscarded': True}
         (output / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
         print(json.dumps({'passed': True, 'result': str(output / 'result.json')}))

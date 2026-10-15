@@ -48,7 +48,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\ai-pet.ps1 -Action s
 .\tools\ai-pet.ps1 -Action status
 ```
 
-桌面端默认使用本机会话读取，无需切换 CLI 或先配置 Hooks。这是实验性兼容方式，支持开始、已观察到的工具活动、结束与明确中断；权限提示和普通文字追问暂不能可靠自动识别。新事件到来才会改变宠物动作，不重放历史任务。
+桌面端默认使用本机会话读取，无需切换 CLI 或先配置 Hooks。这是实验性兼容方式，支持开始、已观察到的工具活动、结束、明确中断，以及桌面端明确显示成功的选择题式用户输入请求。后者已通过当前真实会话验证；权限提示和普通文字追问仍不能可靠自动识别。新事件到来才会改变宠物动作，不重放历史任务。
 
 Hooks 是可选增强：`codex-install` 在当前 Codex 用户目录注册状态观察 Hooks，并保留其他配置；按 [Codex 官方 Hooks 要求](https://learn.chatgpt.com/docs/hooks)，需本人审核并信任，官方明确记录的入口是 CLI 的 `/hooks`。本项目尚未核实桌面端审核入口，不将这一步作为桌面端连接的前提。`codex-status` 只核对登记，不能证明已信任或已收到真实事件。
 

@@ -89,6 +89,18 @@ Copy-Item -LiteralPath $reviewedDefaultPath -Destination (Join-Path $outputRoot 
 
 if ($CompileOnly) { Write-Output "Built $exePath"; return }
 
+# Regression processes must never inherit an actual user's tool connection or works.
+$smokeEnvironmentNames = @('AI_PET_DATA_DIR','AI_PET_EVENT_DIR','AI_PET_REVIEW_LEDGER','CODEX_HOME')
+$previousSmokeEnvironment = @{}
+foreach ($name in $smokeEnvironmentNames) { $previousSmokeEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
+$smokeDataRoot = Join-Path $outputRoot ('build-smoke-data-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $smokeDataRoot -Force | Out-Null
+$env:AI_PET_DATA_DIR = $smokeDataRoot
+$env:AI_PET_EVENT_DIR = Join-Path $smokeDataRoot 'codex-events'
+$env:AI_PET_REVIEW_LEDGER = Join-Path $smokeDataRoot 'candidate-review-ledger.json'
+$env:CODEX_HOME = Join-Path $smokeDataRoot 'codex'
+try {
+
 $placementResultPath = Join-Path $outputRoot 'window-placement-results.json'
 $placementProcess = Start-Process -FilePath $exePath -ArgumentList @('--test-window-placement', $placementResultPath) -PassThru -Wait -WindowStyle Hidden
 if ($placementProcess.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $placementResultPath)) {
@@ -950,3 +962,8 @@ Write-Output "Theme review fingerprint gate passed: $($reviewFingerprintResult |
 Write-Output "WPF path-traversal rejection passed: $($maliciousResult.error)"
 Write-Output "WPF duplicate-manifest-field rejection passed: $($duplicateResult.error)"
 Write-Output "Rendered $previewPath"
+} finally {
+    foreach ($name in $smokeEnvironmentNames) {
+        [Environment]::SetEnvironmentVariable($name, $previousSmokeEnvironment[$name], 'Process')
+    }
+}

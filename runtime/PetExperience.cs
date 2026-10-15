@@ -115,6 +115,7 @@ namespace AIPet.Desktop
             } catch (Exception) { }
             return new { version = 1, states = AiStates, tool = connectedAiTool, session = connectedAiSession,
                 generationProtocolVersion = 1, generator = generator, defaultCreationMode = generator == null ? "agent-handoff" : "configured-generator",
+                codexDesktop = new { displayedInputRequests = true, permissionPrompts = false, proseQuestions = false },
                 bindings = aiBindings, actions = actions, lastState = lastAiState, lastOutcome = lastAiOutcome,
                 activeSlot = activeThemeAction == null ? null : activeThemeAction.Slot,
                 dataDirectory = experienceRoot, runtimeRunning = window != null && !exiting, checkedAtMs = CurrentUnixMilliseconds(),
@@ -138,6 +139,8 @@ namespace AIPet.Desktop
             try
             {
                 if (args[0] == "--ai-codex-hook" && args.Length == 1) RecordSimpleCodexHook();
+                else if (args[0] == "--ai-test-live-desktop" && args.Length == 4)
+                    ObserveLiveDesktopForTest(args[1], Int32.Parse(args[2], CultureInfo.InvariantCulture), Path.GetFullPath(args[3]));
                 else if (args[0] == "--ai-test-generation-review" && args.Length == 3) TestGenerationReview(args[1], Path.GetFullPath(args[2]));
                 else if (args[0] == "--ai-test-generate-click" && args.Length == 3) TestGenerateClick(Path.GetFullPath(args[1]), Path.GetFullPath(args[2]));
                 else if (args[0] == "--ai-codex-connect" && args.Length == 2) ConnectSimpleCodex(args[1]);

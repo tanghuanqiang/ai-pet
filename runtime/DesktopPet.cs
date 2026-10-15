@@ -1132,11 +1132,10 @@ namespace AIPet.Desktop
                     ? consumed == 0 && files.Length == 0 && activeThemeAction != null && activeThemeAction.Slot == "idle" &&
                       lastCodexRequestedSlot == null
                     : consumed == 1 && activeThemeAction != null && activeThemeAction.Slot == args[5] && playedTelemetry;
-                bool reviewSemanticsAccurate = ThemeEventReviewNote("recent-activity").Contains("task_started") &&
-                    ThemeEventReviewNote("recent-activity").Contains("item_completed") &&
-                    ThemeEventReviewNote("needs-user").Contains("没有权限请求事件") &&
-                    ThemeEventReviewNote("stop-unknown").Contains("结果未知") &&
-                    ThemeEventReviewNote("interrupt").Contains("reason=interrupted");
+                bool reviewSemanticsAccurate = ThemeEventReviewNote("recent-activity").Contains("任务进行中") &&
+                    ThemeEventReviewNote("needs-user").Contains("明确需要你回答或确认") &&
+                    ThemeEventReviewNote("stop-unknown").Contains("结束不代表成功") &&
+                    ThemeEventReviewNote("interrupt").Contains("暂停或被中断");
                 bool metadataOnly = true;
                 foreach (string eventPath in files)
                     if (File.ReadAllText(eventPath).Contains("SENSITIVE_DESKTOP_FIXTURE")) metadataOnly = false;
@@ -1234,6 +1233,7 @@ namespace AIPet.Desktop
             }
             if (args.Length >= 6 && args[0] == "--test-pending-role-handoff")
             {
+                try {
                 string testRoot = Path.Combine(Path.GetFullPath(args[4]), Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(testRoot);
                 activeRoleFilePath = Path.Combine(testRoot, "active-role.little-orbit.json");
@@ -1287,6 +1287,10 @@ namespace AIPet.Desktop
                 File.WriteAllText(Path.GetFullPath(args[5]), handoffResult);
                 if (!oldRoleStayedActive || !pendingReloaded || !mutationRejected || !failureRestored || !switchedTogether)
                     throw new InvalidOperationException("Pending role handoff failed: " + handoffResult);
+                } catch (Exception error) {
+                    File.WriteAllText(Path.GetFullPath(args[5]) + ".error.txt", error.ToString());
+                    Environment.ExitCode = 2;
+                }
                 return;
             }
             if (args.Length >= 5 && args[0] == "--test-role-rollback")
@@ -1733,7 +1737,7 @@ namespace AIPet.Desktop
             if (!Regex.IsMatch(id, "^[a-f0-9]{32}$") || !Regex.IsMatch(session, "^[a-f0-9]{64}$") ||
                 Array.IndexOf(new string[] { "UserPromptSubmit", "PreToolUse", "PostToolUse", "PermissionRequest",
                     "Stop", "Interrupt", "SessionEnd", "DesktopTurnStarted", "DesktopTurnEndedUnknown",
-                    "DesktopTurnInterrupted", "DesktopToolActivity" }, eventName) < 0) return null;
+                    "DesktopTurnInterrupted", "DesktopToolActivity", "DesktopUserInputRequested" }, eventName) < 0) return null;
             long observedAt;
             try { observedAt = Convert.ToInt64(value["observedAtMs"], CultureInfo.InvariantCulture); }
             catch { return null; }
@@ -1882,6 +1886,7 @@ namespace AIPet.Desktop
 
         private static void ClearDesktopSelection()
         {
+            pendingDesktopInputCalls.Clear();
             selectedDesktopHookSession = null;
             if (String.IsNullOrEmpty(desktopSelectionFilePath)) return;
             try { if (File.Exists(desktopSelectionFilePath)) File.Delete(desktopSelectionFilePath); }
@@ -2017,6 +2022,13 @@ namespace AIPet.Desktop
         {
             if (length < 32 || length > 4 * 1024 * 1024) return;
             string line = new UTF8Encoding(false, true).GetString(bytes, start, length).TrimEnd('\r');
+            if (line.StartsWith("{\"timestamp\":", StringComparison.Ordinal) && length <= 128 * 1024 &&
+                line.IndexOf("\"type\":\"response_item\"", 0, Math.Min(200, line.Length), StringComparison.Ordinal) >= 0) {
+                EnsureNoDuplicateJsonObjectKeys(line);
+                Dictionary<string, object> response = new JavaScriptSerializer { MaxJsonLength = 128 * 1024, RecursionLimit = 32 }
+                    .DeserializeObject(line) as Dictionary<string, object>;
+                ObserveDesktopInputRequest(response, bytes, start, length, sourceOffset); return;
+            }
             if (!line.StartsWith("{\"timestamp\":", StringComparison.Ordinal) ||
                 line.IndexOf("\"type\":\"event_msg\"", 0, Math.Min(200, line.Length), StringComparison.Ordinal) < 0) return;
             bool toolCandidate = line.IndexOf("\"type\":\"item_completed\"", 0,
@@ -2034,6 +2046,7 @@ namespace AIPet.Desktop
             if (ReadString(record, "type") != "event_msg" ||
                 !Regex.IsMatch(ReadString(payload, "turn_id"), "^[a-f0-9-]{36}$")) return;
             string kind = ReadString(payload, "type");
+            if (kind == "task_started" || kind == "task_complete" || kind == "turn_aborted") pendingDesktopInputCalls.Clear();
             string eventName = kind == "task_started" ? "DesktopTurnStarted"
                 : kind == "task_complete" ? "DesktopTurnEndedUnknown"
                 : kind == "turn_aborted" && ReadString(payload, "reason") == "interrupted" ? "DesktopTurnInterrupted" : null;
@@ -2207,10 +2220,10 @@ namespace AIPet.Desktop
             lastCodexActionEventId = ReadString(record, "eventId");
             lastCodexActionSession = ReadString(record, "session");
             lastCodexActionEvidence = record.ContainsKey("evidence") ? record["evidence"] : null;
-            string slot = eventName == "PermissionRequest" ? "needs-user"
+            string slot = eventName == "PermissionRequest" || eventName == "DesktopUserInputRequested" ? "needs-user"
                 : eventName == "Stop" || eventName == "DesktopTurnEndedUnknown" ? "stop-unknown"
                 : eventName == "Interrupt" || eventName == "DesktopTurnInterrupted" ? "interrupt" : "recent-activity";
-            string state = eventName == "PermissionRequest" ? "needs-user"
+            string state = eventName == "PermissionRequest" || eventName == "DesktopUserInputRequested" ? "needs-user"
                 : eventName == "DesktopTurnStarted" ? "started"
                 : eventName == "DesktopTurnEndedUnknown" ? "finished"
                 : eventName == "Interrupt" || eventName == "DesktopTurnInterrupted" ? "paused"

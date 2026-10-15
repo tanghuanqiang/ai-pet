@@ -11,7 +11,7 @@ For a user working in the Codex desktop app, connect the actual desktop session 
 
 `codex-connect` reads `CODEX_THREAD_ID`, or accepts an explicit `-Session`. Never bind a guessed most-recent session. It stores a session hash. For an existing Codex Desktop session it also records a validated local transcript location and starts at the file's current end. The local reader is experimental because the transcript format is not a stable integration interface. Selecting another tool or disconnecting clears that selection.
 
-This route observes task start, tool activity, turn completion and explicit interruption. It does not reliably observe permission prompts or ordinary follow-up questions. Explain those limits without presenting optional Hook trust as a prerequisite for the desktop connection.
+This route observes task start, tool activity, turn completion, explicit interruption and successfully displayed desktop input requests. The input-request compatibility reader matches the observed `request_user_input_async` call to its own `accepted: true` result, using only fresh records in the selected session. It ignores failed/unmatched requests, ordinary text and replayed results. It does not reliably observe permission prompts or ordinary follow-up questions. Explain those limits without presenting optional Hook trust as a prerequisite for the desktop connection. `status.codexDesktop` reports the reader's supported input sources; older executables without that field do not establish this support.
 
 ## Optional Hooks
 
@@ -33,8 +33,9 @@ The official reference documents `/hooks` in the CLI. A desktop trust-review ent
 | Stop / local task_complete | finished (turn ended, outcome unknown) |
 | Interrupt / local turn_aborted with interrupted reason | paused |
 | PermissionRequest | needs-user (permission only) |
+| Desktop `request_user_input_async` with matching successful display acknowledgement | needs-user (explicit input request) |
 
-Ordinary text questions are not automatically detected. Source silence does not mean pause or completion. The observer emits no decisions or model context. It discards prompts, tool inputs and outputs, and only enqueues fresh state events for the bound session. Hidden pets and quiet hours suppress animation; running loops until a new state or disconnection. New hooks apply according to Codex's own loading/trust behavior; do not promise the active turn already loaded them.
+Ordinary text questions are not automatically detected. An asynchronous input prompt is an attention signal, not proof that all work has stopped; later task/tool activity may return the pet to running. Source silence does not mean pause or completion. The observer emits no decisions or model context. It discards prompts, tool inputs and outputs, and only enqueues fresh state events for the bound session. Hidden pets and quiet hours suppress animation; running loops until a new state or disconnection. New hooks apply according to Codex's own loading/trust behavior; do not promise the active turn already loaded them.
 
 `codex-status` checks registration, not runtime trust or event delivery. Verify real delivery with `status` after actual lifecycle activity. The repository smoke test uses documented-format fixtures and does not by itself establish real Codex integration acceptance.
 
