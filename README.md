@@ -45,11 +45,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\ai-pet.ps1 -Action s
 
 ```powershell
 .\tools\ai-pet.ps1 -Action codex-connect
-.\tools\ai-pet.ps1 -Action codex-install
-.\tools\ai-pet.ps1 -Action codex-status
+.\tools\ai-pet.ps1 -Action status
 ```
 
-本机会话读取是实验性兼容方式，支持开始、已观察到的工具活动、结束与中断。`codex-install` 在当前 Codex 用户目录注册状态观察 Hooks，并保留其他配置；按 [Codex 官方 Hooks 要求](https://learn.chatgpt.com/docs/hooks)，需用户在 Codex 中审核并信任，CLI 使用 `/hooks`。`codex-status` 只核对登记，不能证明已信任或已收到真实事件。新事件到来才会改变宠物动作，不重放历史任务。
+桌面端默认使用本机会话读取，无需切换 CLI 或先配置 Hooks。这是实验性兼容方式，支持开始、已观察到的工具活动、结束与明确中断；权限提示和普通文字追问暂不能可靠自动识别。新事件到来才会改变宠物动作，不重放历史任务。
+
+Hooks 是可选增强：`codex-install` 在当前 Codex 用户目录注册状态观察 Hooks，并保留其他配置；按 [Codex 官方 Hooks 要求](https://learn.chatgpt.com/docs/hooks)，需本人审核并信任，官方明确记录的入口是 CLI 的 `/hooks`。本项目尚未核实桌面端审核入口，不将这一步作为桌面端连接的前提。`codex-status` 只核对登记，不能证明已信任或已收到真实事件。
 
 Hooks 将提交映射为开始，工具执行映射为进行中，Stop 映射为本轮结束，Interrupt 映射为暂停，PermissionRequest 映射为需要确认。普通文字追问暂不自动识别；Stop 不代表更大目标完成或执行成功。只响应绑定会话，不保存 Prompt、命令正文或工具输出。用 `codex-remove` 移除本适配器 Hooks，用 `disconnect` 停止响应。
 
