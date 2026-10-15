@@ -60,6 +60,7 @@ namespace AIPet.Desktop
             config["connectedAtMs"] = CurrentUnixMilliseconds();
             config["bindings"] = new Dictionary<string, string>(aiBindings);
             Directory.CreateDirectory(experienceRoot);
+            if (tool != "codex") ClearDesktopSelection();
             WriteCodexEventAtomically(aiConfigurationPath, new JavaScriptSerializer().Serialize(config));
             ReloadAiConnection();
         }
@@ -68,7 +69,9 @@ namespace AIPet.Desktop
         {
             if (!File.Exists(aiConfigurationPath))
             {
+                bool wasConnected = connectedAiTool != null;
                 connectedAiTool = connectedAiSession = aiConfigurationText = null;
+                if (wasConnected) ResetConnectedPlayback();
                 return;
             }
             string text = ReadBoundedJson(aiConfigurationPath);
@@ -89,6 +92,9 @@ namespace AIPet.Desktop
             connectedAiTool = tool; connectedAiSession = session; aiConnectedAt = connected; aiConfigurationText = text;
             if (changed) {
                 seenAiEvents.Clear(); seenAiEventOrder.Clear(); lastAiState = lastAiOutcome = null;
+                selectedCodexSession = null; selectedDesktopRolloutPath = null;
+                if (tool == "codex") RestoreDesktopSelection();
+                if (selectedCodexSession != session) { selectedCodexSession = null; selectedDesktopRolloutPath = null; }
                 if (window != null && activeTheme != null) { activeThemeOneShot = false; SetThemeAction("idle", false); }
             }
         }
@@ -100,6 +106,7 @@ namespace AIPet.Desktop
                 actions.Add(new { slot = action.Slot, label = SimpleActionLabel(action.Slot) });
             return new { version = 1, states = AiStates, tool = connectedAiTool, session = connectedAiSession,
                 bindings = aiBindings, actions = actions, lastState = lastAiState, lastOutcome = lastAiOutcome,
+                activeSlot = activeThemeAction == null ? null : activeThemeAction.Slot,
                 dataDirectory = experienceRoot, runtimeRunning = window != null && !exiting, checkedAtMs = CurrentUnixMilliseconds(),
                 pid = System.Diagnostics.Process.GetCurrentProcess().Id };
         }
@@ -120,7 +127,9 @@ namespace AIPet.Desktop
             if (!args[0].StartsWith("--ai-", StringComparison.Ordinal)) return false;
             try
             {
-                if (args[0] == "--ai-connect" && args.Length == 3) SaveAiConnection(args[1], args[2]);
+                if (args[0] == "--ai-codex-hook" && args.Length == 1) RecordSimpleCodexHook();
+                else if (args[0] == "--ai-codex-connect" && args.Length == 2) ConnectSimpleCodex(args[1]);
+                else if (args[0] == "--ai-connect" && args.Length == 3) SaveAiConnection(args[1], args[2]);
                 else if (args[0] == "--ai-disconnect" && args.Length == 1) SaveAiConnection(null, null);
                 else if (args[0] == "--ai-bind" && args.Length == 3)
                 {
@@ -236,8 +245,19 @@ namespace AIPet.Desktop
             try
             {
                 ReloadAiConnection();
-                if (connectedAiTool == null || !Directory.Exists(aiEventsPath)) return;
-                string[] files = Directory.GetFiles(aiEventsPath, "*.json");
+                if (connectedAiTool == null) {
+                    Directory.CreateDirectory(experienceRoot);
+                    WriteCodexEventAtomically(Path.Combine(experienceRoot, "ai-status.json"), new JavaScriptSerializer().Serialize(AiCapabilities()));
+                    return;
+                }
+                if (connectedAiTool == "codex" && selectedCodexSession == connectedAiSession) {
+                    PollSelectedDesktopRollout(); ConsumeSelectedCodexEvent();
+                }
+                if (lastAiState != null && window != null && (!window.IsVisible || IsWithinQuietHours(preferences, DateTime.Now.TimeOfDay))) {
+                    lastAiOutcome = window.IsVisible ? "quiet-hours" : "hidden";
+                    ResetConnectedPlayback();
+                }
+                string[] files = Directory.Exists(aiEventsPath) ? Directory.GetFiles(aiEventsPath, "*.json") : new string[0];
                 Array.Sort(files, StringComparer.Ordinal);
                 foreach (string file in files)
                 {
@@ -247,7 +267,18 @@ namespace AIPet.Desktop
                 Directory.CreateDirectory(experienceRoot);
                 WriteCodexEventAtomically(Path.Combine(experienceRoot, "ai-status.json"), new JavaScriptSerializer().Serialize(AiCapabilities()));
             }
-            catch (Exception) { connectedAiTool = connectedAiSession = null; lastAiOutcome = "invalid-config"; }
+            catch (Exception) {
+                bool wasConnected = connectedAiTool != null;
+                connectedAiTool = connectedAiSession = aiConfigurationText = null; lastAiOutcome = "invalid-config";
+                if (wasConnected) ResetConnectedPlayback();
+            }
+        }
+
+        private static void ResetConnectedPlayback()
+        {
+            if (window != null && activeTheme != null && activeThemeAction != null && activeThemeAction.Slot != "idle") {
+                activeThemeOneShot = false; SetThemeAction("idle", false);
+            }
         }
 
         private static string SimpleActionLabel(string slot)
@@ -402,13 +433,14 @@ namespace AIPet.Desktop
             }));
             agentSetup.Content = agentFields;
             Expander codexSetup = new Expander { Header = "可连接的本机会话", Margin = new Thickness(0, 0, 0, 12) };
-            connection.Children.Add(ManagerButton("选择本机 Codex 会话", delegate {
+            connection.Children.Add(ManagerButton("连接 Codex：选择任务", delegate {
                 PopulateCodexSessionMenu();
                 StackPanel sessions = new StackPanel();
                 AddCodexConnectionButtons(sessions, codexSessionItem.DropDownItems, connectionStatus);
                 codexSetup.Content = sessions; codexSetup.IsExpanded = true;
             }));
             connection.Children.Add(codexSetup);
+            connection.Children.Add(ManagerText("Codex 本机会话可读取开始、工具活动、结束和中断。授权提醒需 Agent 配置 Codex Hooks 并由你在 Codex 中信任；普通文字追问暂不自动识别。", false));
             connection.Children.Add(agentSetup);
             connection.Children.Add(ManagerButton("断开连接", delegate {
                 SaveAiConnection(null, null); selectedCodexSession = null; selectedDesktopRolloutPath = null; ClearDesktopSelection();
@@ -476,7 +508,12 @@ namespace AIPet.Desktop
                 Forms.ToolStripMenuItem menu = item as Forms.ToolStripMenuItem;
                 if (menu == null) continue;
                 if (menu.DropDownItems.Count > 0) { AddCodexConnectionButtons(panel, menu.DropDownItems, status); continue; }
-                Button button = ManagerButton(menu.Text, delegate { SaveAiConnection(null, null); menu.PerformClick(); status.Text = selectedCodexSession == null ? "已断开" : "已连接 Codex 会话"; });
+                Button button = ManagerButton(menu.Text, delegate {
+                    SaveAiConnection(null, null); menu.PerformClick();
+                    string session = selectedCodexSession;
+                    if (session != null) SaveAiConnection("codex", session);
+                    status.Text = session == null ? "已断开" : "已连接 Codex 会话";
+                });
                 button.IsEnabled = menu.Enabled; panel.Children.Add(button);
             }
         }
@@ -622,6 +659,20 @@ namespace AIPet.Desktop
                 outcomes.Add(new { state = state, accepted = accepted, played = played, duplicateRejected = duplicate, otherSessionRejected = isolated, staleRejected = stale });
             }
             SaveAiConnection(null, null);
+            SetThemeAction("click", true); PollAiConnection(); PollAiConnection();
+            bool manualWithoutConnection = activeThemeAction.Slot == "click";
+            SaveAiConnection("test-agent", "task-1");
+            Dictionary<string, object> runningEvent = new Dictionary<string, object> {
+                {"version",1}, {"eventId",Guid.NewGuid().ToString("N")}, {"observedAtMs",CurrentUnixMilliseconds()},
+                {"tool","test-agent"}, {"session","task-1"}, {"state","running"} };
+            ApplyAiEvent(runningEvent); window.Hide(); PollAiConnection();
+            bool hiddenStopsRunning = activeThemeAction.Slot == "idle" && lastAiOutcome == "hidden";
+            window.Show(); PollAiConnection();
+            bool showDoesNotReplay = activeThemeAction.Slot == "idle";
+            runningEvent["eventId"] = Guid.NewGuid().ToString("N"); runningEvent["observedAtMs"] = CurrentUnixMilliseconds();
+            ApplyAiEvent(runningEvent); File.Delete(aiConfigurationPath); PollAiConnection();
+            bool removedConnectionStopsRunning = activeThemeAction.Slot == "idle" && connectedAiTool == null;
+            SaveAiConnection(null, null);
             RenderPreview(Path.Combine(output, "pet.png"));
             string creation = SaveCreationRequest(new string[] {
                 Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "reference-cat.jpg"),
@@ -637,9 +688,12 @@ namespace AIPet.Desktop
             File.WriteAllText(Path.Combine(output, "result.json"), new JavaScriptSerializer().Serialize(new {
                 menu = menu, simpleMenu = simple, reusedWindow = reused, fiveStateIsolation = states,
                 actions = actionsMenu.DropDownItems.Count, outcomes = outcomes, disconnected = connectedAiTool == null,
+                manualWithoutConnection = manualWithoutConnection, hiddenStopsRunning = hiddenStopsRunning,
+                showDoesNotReplay = showDoesNotReplay, removedConnectionStopsRunning = removedConnectionStopsRunning,
                 twoPhotoCreationRequest = creation, creationPreviewRequiresConfirmation = previewOnly }));
             ExitApplication();
-            if (!simple || !reused || !states || !previewOnly) throw new InvalidOperationException("Simple experience regression failed.");
+            if (!simple || !reused || !states || !previewOnly || !manualWithoutConnection || !hiddenStopsRunning ||
+                !showDoesNotReplay || !removedConnectionStopsRunning) throw new InvalidOperationException("Simple experience regression failed.");
         }
 
         // This original illustration is generated from code; no private photo or model is distributed.

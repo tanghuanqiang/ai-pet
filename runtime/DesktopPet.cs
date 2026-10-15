@@ -191,6 +191,16 @@ namespace AIPet.Desktop
         [STAThread]
         private static void Main(string[] args)
         {
+            if (args.Length == 1 && args[0] == "--ai-codex-hook") {
+                try {
+                    string hookData = Environment.GetEnvironmentVariable("AI_PET_DATA_DIR");
+                    if (String.IsNullOrEmpty(hookData)) hookData = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AI Pet Studio");
+                    if (!Path.IsPathRooted(hookData)) return;
+                    InitializeSimpleExperience(Path.GetFullPath(hookData)); RecordSimpleCodexHook();
+                } catch (Exception) { }
+                return;
+            }
             if (args.Length == 2 && args[0] == "--export-demo-photo")
             { ExportPublicDemoPhoto(Path.GetFullPath(args[1])); return; }
             if (args.Length == 2 && args[0] == "--export-demo-assets")
@@ -2164,6 +2174,25 @@ namespace AIPet.Desktop
             }
             if (record == null) return false;
             string eventName = ReadString(record, "event");
+            if (connectedAiTool == "codex" && selectedCodexSession == connectedAiSession) {
+                if (eventName == "SessionEnd") { SaveAiConnection(null, null); return true; }
+                string normalized = SimpleCodexState(eventName);
+                if (normalized == null) return false;
+                bool accepted = ApplyAiEvent(new Dictionary<string, object> {
+                    {"version", 1}, {"eventId", ReadString(record, "eventId")},
+                    {"observedAtMs", record["observedAtMs"]}, {"tool", "codex"},
+                    {"session", connectedAiSession}, {"state", normalized}
+                });
+                if (accepted) {
+                    lastCodexActionAtMs = CurrentUnixMilliseconds(); lastCodexActionEventId = ReadString(record, "eventId");
+                    lastCodexActionSession = ReadString(record, "session");
+                    lastCodexActionEvidence = record.ContainsKey("evidence") ? record["evidence"] : null;
+                    lastCodexActionSource = eventName.StartsWith("Desktop", StringComparison.Ordinal) ? "desktop-rollout" : "codex-hook";
+                    lastCodexRequestedSlot = aiBindings[normalized]; lastCodexActionOutcome = lastAiOutcome;
+                    lastCodexPlayedSlot = lastAiOutcome == "played" ? aiBindings[normalized] : null;
+                }
+                return accepted;
+            }
             if (eventName == "SessionEnd")
             {
                 selectedCodexSession = null;

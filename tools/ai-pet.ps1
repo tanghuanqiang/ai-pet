@@ -1,7 +1,7 @@
 ﻿param(
-    [ValidateSet('start','status','connect','disconnect','event','bind','build','requests','result')][string]$Action = 'status',
+    [ValidateSet('start','status','connect','disconnect','event','bind','build','requests','result','codex-connect','codex-install','codex-remove','codex-status')][string]$Action = 'status',
     [string]$Tool, [string]$Session, [string]$State, [string]$Slot,
-    [string]$Executable, [string]$DataDirectory, [string]$RequestId, [string]$Theme
+    [string]$Executable, [string]$DataDirectory, [string]$RequestId, [string]$Theme, [string]$CodexHome
 )
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
@@ -16,6 +16,13 @@ if (-not $Executable) {
 }
 if (-not $Executable -or -not (Test-Path -LiteralPath $Executable -PathType Leaf)) { throw '未找到桌宠程序，请先构建或安装。' }
 $Executable = [IO.Path]::GetFullPath($Executable)
+if ($Action -in @('codex-install','codex-remove','codex-status')) {
+    $setup = @{ Action = $Action.Substring(6); Executable = $Executable }
+    if ($DataDirectory) { $setup.DataDirectory = $DataDirectory }
+    if ($CodexHome) { $setup.CodexHome = $CodexHome }
+    & (Join-Path $PSScriptRoot 'codex-connection.ps1') @setup
+    return
+}
 $previousDataDirectory = $env:AI_PET_DATA_DIR
 try {
     if ($DataDirectory) {
@@ -29,6 +36,11 @@ try {
     }
     $arguments = @()
     if ($Action -eq 'connect') { $arguments = @('--ai-connect', $Tool, $Session) }
+    elseif ($Action -eq 'codex-connect') {
+        if (-not $Session) { $Session = $env:CODEX_THREAD_ID }
+        if (-not $Session) { throw '请提供真实 Codex 会话编号，或从当前 Codex Agent 中执行。' }
+        $arguments = @('--ai-codex-connect', $Session)
+    }
     elseif ($Action -eq 'disconnect') { $arguments = @('--ai-disconnect') }
     elseif ($Action -eq 'event') { $arguments = @('--ai-event', $Tool, $Session, $State) }
     elseif ($Action -eq 'bind') { $arguments = @('--ai-bind', $State, $Slot) }

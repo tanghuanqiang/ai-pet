@@ -41,7 +41,7 @@ Select a slot from the `actions` returned by `status` and map it:
 .\tools\ai-pet.ps1 -Action disconnect
 ```
 
-The native connection panel also offers experimental local Codex session selection. Generic tool connections take precedence over that watcher; disconnect before changing connection type.
+For Codex, read [the Codex adapter instructions](references/codex.md) and use `-Action codex-connect` in the real current session. The native panel also offers local session selection. Both use the same five-state bindings. Other tool connections take precedence over Codex playback.
 
 ## Customize
 

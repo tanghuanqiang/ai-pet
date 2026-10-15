@@ -37,7 +37,21 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\ai-pet.ps1 -Action s
 
 五个状态标识是 `started`、`running`、`finished`、`paused`、`needs-user`。动作从 `status` 返回的 `actions` 中选择。可用 `-Executable` 指定安装位置、`-DataDirectory` 指定隔离数据目录。
 
-工具适配器须发送真实生命周期事件；Agent 也可报告自己的任务状态。通用协议不等于已适配所有 AI 工具。界面提供实验性本机 Codex 会话选择；未提供的状态不会从沉默或普通日志中猜测，结束也不代表成功。见[状态协议](skills/ai-pet/references/tool-events.md)。
+工具适配器须发送真实生命周期事件；Agent 也可报告自己的任务状态。通用协议不等于已适配所有 AI 工具。未提供的状态不会从沉默或普通日志中猜测，结束也不代表成功。见[状态协议](skills/ai-pet/references/tool-events.md)。
+
+### Codex
+
+让当前 Codex Agent 执行下面的命令即可绑定它的真实会话（默认读取 `CODEX_THREAD_ID`）；也可以通过 `-Session` 明确指定。桌面界面的“连接 Codex：选择任务”提供本机会话选择。
+
+```powershell
+.\tools\ai-pet.ps1 -Action codex-connect
+.\tools\ai-pet.ps1 -Action codex-install
+.\tools\ai-pet.ps1 -Action codex-status
+```
+
+本机会话读取是实验性兼容方式，支持开始、已观察到的工具活动、结束与中断。`codex-install` 在当前 Codex 用户目录注册状态观察 Hooks，并保留其他配置；按 [Codex 官方 Hooks 要求](https://learn.chatgpt.com/docs/hooks)，需用户在 Codex 中审核并信任，CLI 使用 `/hooks`。`codex-status` 只核对登记，不能证明已信任或已收到真实事件。新事件到来才会改变宠物动作，不重放历史任务。
+
+Hooks 将提交映射为开始，工具执行映射为进行中，Stop 映射为本轮结束，Interrupt 映射为暂停，PermissionRequest 映射为需要确认。普通文字追问暂不自动识别；Stop 不代表更大目标完成或执行成功。只响应绑定会话，不保存 Prompt、命令正文或工具输出。用 `codex-remove` 移除本适配器 Hooks，用 `disconnect` 停止响应。
 
 ## 自定义照片和 Prompt
 

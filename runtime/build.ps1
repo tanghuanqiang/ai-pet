@@ -58,7 +58,7 @@ $runningPreview = Get-Process -Name 'AIPetDesktop' -ErrorAction SilentlyContinue
 if ($runningPreview) {
     throw 'Close the running desktop preview from its tray menu before rebuilding.'
 }
-$arguments = @('/nologo', '/target:winexe', "/out:$exePath") + ($references | ForEach-Object { "/reference:$_" }) + @($sourcePath, (Join-Path $runtimeRoot 'PetExperience.cs'))
+$arguments = @('/nologo', '/target:winexe', "/out:$exePath") + ($references | ForEach-Object { "/reference:$_" }) + @($sourcePath, (Join-Path $runtimeRoot 'PetExperience.cs'), (Join-Path $runtimeRoot 'PetCodex.cs'))
 & $compiler @arguments
 if ($LASTEXITCODE -ne 0) { throw "C# compilation failed with exit code $LASTEXITCODE" }
 if ($Public) {

@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--version', default='0.3.0-preview.1')
+    parser.add_argument('--version', default='0.3.0-preview.2')
     args = parser.parse_args()
     if not re.fullmatch(r'\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?', args.version):
         parser.error('Invalid version')
@@ -32,6 +32,7 @@ def main() -> None:
     shutil.copy2(ROOT / 'runtime/install-public.ps1', stage / 'install.ps1')
     (stage / 'tools').mkdir()
     shutil.copy2(ROOT / 'tools/ai-pet.ps1', stage / 'tools/ai-pet.ps1')
+    shutil.copy2(ROOT / 'tools/codex-connection.ps1', stage / 'tools/codex-connection.ps1')
     shutil.copytree(ROOT / 'skills/ai-pet', stage / 'skills/ai-pet')
     files = [{'path': str(p.relative_to(stage)).replace('\\', '/'), 'sha256': hashlib.sha256(p.read_bytes()).hexdigest()}
              for p in sorted(stage.rglob('*')) if p.is_file()]
