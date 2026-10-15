@@ -38,6 +38,7 @@
 - [x] 优先补充 Codex 适配：Agent 直接绑定当前会话、本机会话与 Hooks 共用五状态映射；隔离回归通过，并观察到当前真实 Codex 会话的工具活动触发工作动作。
 - [ ] Codex Hooks 在用户实际客户端审核信任后，完成真实提交、结束、中断、授权提示的端到端验收；事件样本回归不替代这项验收。其他 Windows 设备尚待验证。
 - [x] 发布 [v0.3.0-preview.2](https://github.com/tanghuanqiang/ai-pet/releases/tag/v0.3.0-preview.2)：完整桌面回归、公开源码构建与安装包内 Codex 命令回归通过；Windows ZIP 与 Skill 的远端 SHA-256 与本地一致。验证使用隔离安装，未覆盖正式安装。
+- [x] 发布 [v0.3.0-preview.3](https://github.com/tanghuanqiang/ai-pet/releases/tag/v0.3.0-preview.3)：默认 Agent 制作交接、可选自动生成器、简化动作预览。公开源码独立构建、隔离安装后的原生按钮复制多图请求、候选回传预览、原作品保留、生成进程生命周期和 Codex 五状态回归通过；Windows ZIP 与 Skill 远端 SHA-256 与本地一致。候选回传的协议回归使用演示素材，不代表实际 AI 动作质量验收。
 
 截至本轮的定位是可用能力逐项验证的开源预览版，尚未将完整自定义生成目标标为完成。GitHub 账号正常权限核实可用，不需要重新登录。
 
