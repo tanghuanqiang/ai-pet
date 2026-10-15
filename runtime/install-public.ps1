@@ -26,6 +26,8 @@ $existing = Join-Path $destination 'AIPetDesktop.exe'
 if (Test-Path -LiteralPath $existing) { Copy-Item -LiteralPath $existing -Destination (Join-Path $destination 'AIPetDesktop.previous.exe') -Force }
 foreach ($file in $verified) {
     New-Item -ItemType Directory -Path (Split-Path $file.Target -Parent) -Force | Out-Null
+    # Older private builds keep their reference photo beside the executable.
+    if ($file.Relative -eq 'reference-cat.jpg' -and (Test-Path -LiteralPath $file.Target)) { continue }
     Copy-Item -LiteralPath $file.Source -Destination $file.Target -Force
 }
 Copy-Item -LiteralPath (Join-Path $packageRoot 'public-package.json') -Destination (Join-Path $destination 'public-package.json') -Force
