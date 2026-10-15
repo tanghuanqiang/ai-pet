@@ -30,16 +30,23 @@ function Write-Object([string]$Path, [object]$Value) {
         else { [IO.File]::Move($temporary, $Path) }
     } finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force } }
 }
-function Remove-Owned([object]$Config, [string]$Command) {
+function Remove-Owned([object]$Config, [string]$Command, [string[]]$EventNames = $events) {
     if ($null -eq $Config.PSObject.Properties['hooks']) { return }
-    foreach ($eventName in $events) {
+    foreach ($eventName in $EventNames) {
         $property = $Config.hooks.PSObject.Properties[$eventName]
         if ($null -eq $property) { continue }
         [object[]]$kept = @()
         foreach ($group in @($property.Value)) {
             [object[]]$handlers = @($group.hooks)
-            if ($handlers.Count -eq 1 -and $handlers[0].type -ceq 'command' -and
-                $handlers[0].command -ceq $Command -and $handlers[0].commandWindows -ceq $Command) { continue }
+            $hasOwned = @($handlers | Where-Object {
+                $_.type -ceq 'command' -and $_.command -ceq $Command -and $_.commandWindows -ceq $Command
+            }).Count -gt 0
+            if (-not $hasOwned) { $kept += $group; continue }
+            [object[]]$remaining = @($handlers | Where-Object {
+                -not ($_.type -ceq 'command' -and $_.command -ceq $Command -and $_.commandWindows -ceq $Command)
+            })
+            if (-not $remaining.Count) { continue }
+            if ($remaining.Count -ne $handlers.Count) { $group.hooks = $remaining }
             $kept += $group
         }
         if ($kept.Count) { $property.Value = $kept }
@@ -77,6 +84,19 @@ try {
     $config = if (Test-Path -LiteralPath $hookPath) { Read-Object $hookPath } else { [pscustomobject]@{ hooks = [pscustomobject]@{} } }
     if ($null -eq $config.PSObject.Properties['hooks']) { $config | Add-Member -NotePropertyName hooks -NotePropertyValue ([pscustomobject]@{}) }
     if ($config.hooks -isnot [pscustomobject]) { throw '现有 hooks 字段无效。' }
+    $migratedLegacy = $false
+    $legacyPath = Join-Path (Split-Path $Executable -Parent) 'codex-hook-registration.json'
+    if ($Action -eq 'install' -and (Test-Path -LiteralPath $legacyPath -PathType Leaf)) {
+        $legacy = Read-Object $legacyPath
+        if ($legacy.productId -ceq 'little-orbit.ai-pet-studio' -and $legacy.version -eq 1 -and $legacy.codexHome -ieq $CodexHome) {
+            if (-not [IO.Path]::IsPathRooted([string]$legacy.projectRoot)) { throw '旧版桌宠 Hook 登记中的项目路径无效。' }
+            $legacyScript = "& '" + $Executable.Replace("'", "''") + "' --codex-hook-relay '" + ([string]$legacy.projectRoot).TrimEnd([char]92).Replace("'", "''") + "'"
+            $legacyCommand = 'powershell.exe -NoProfile -NonInteractive -EncodedCommand ' + [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($legacyScript))
+            if ($legacy.command -cne $legacyCommand) { throw '旧版桌宠 Hook 与本安装不匹配，未自动迁移。' }
+            Remove-Owned $config $legacyCommand ($events + @('SessionEnd'))
+            $migratedLegacy = $true
+        }
+    }
     if ($marker) { Remove-Owned $config $marker.command }
     if ($Action -eq 'install') {
         $script = "`$env:AI_PET_DATA_DIR = '" + $DataDirectory.Replace("'", "''") + "'; & '" + $Executable.Replace("'", "''") + "' --ai-codex-hook"
@@ -88,7 +108,7 @@ try {
             if ($null -eq $property) { $config.hooks | Add-Member -NotePropertyName $eventName -NotePropertyValue $groups }
             else { $property.Value = $groups }
         }
-        Write-Object $markerPath ([pscustomobject]@{ productId = 'ai-pet.codex'; version = 1; codexHome = $CodexHome; command = $command })
+        Write-Object $markerPath ([pscustomobject]@{ productId = 'ai-pet.codex'; version = 1; codexHome = $CodexHome; command = $command; migratedLegacy = $migratedLegacy })
     }
     Write-Object $hookPath $config
     if ($Action -eq 'remove') { Remove-Item -LiteralPath $markerPath -Force; Write-Output '已移除本适配器，其他 Hooks 保留。' }

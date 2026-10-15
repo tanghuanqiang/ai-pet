@@ -65,6 +65,8 @@ Agent 提交结果后，同一窗口会出现“预览生成的动作”。满�
 
 Agent 用 `-Action requests` 查询本地请求，用 `-Action result -RequestId ... -Theme ...` 提交生成的主题；已配置生成器时可用 `generate` / `generation-status` / `cancel-generation` 管理原生生成。已有主题也可直接导入。
 
+Agent 的生成工具若输出整张动作图集，可使用 `tools/import_sprite_atlas.py` 拆帧打包，不需要自行编写裁图脚本。它保留透明度和原图像素，检查出画、空白和重复静帧；实际形象、动作与边缘质量仍需预览，见[图集制作说明](skills/ai-pet/references/generation.md#sprite-atlas-output)。
+
 折叠的“使用本机眨眼、歪头模板”提供可选创作空间。当前本机生成模板主要支持眨眼和歪头；任意 Prompt 的新动作需要支持该动作的生成后端或用户 Agent 的图像/动画能力。多张照片可保存为参考，现有本机模板读取主照片。填写文字或保存角色卡本身不代表已生成动画。
 
 可选 Creator 需要独立安装 `tools/creator-requirements.txt` 中的 Python 依赖。配置本地模型后才启用相应生成路线，公开包不含权重或私有环境。来自用户图片的主题在使用前仍需预览确认。

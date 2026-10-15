@@ -39,6 +39,18 @@ Agent commands:
 
 Creation spec is `{"photos":["C:\\absolute\\photo.jpg"],"prompt":"Requested pet and motion"}`. `create` returns the request ID and uses the same photo validation and copy/hash logic as the native interface. `generate` launches asynchronously; query that same request until ready/failed/cancelled/interrupted. A polling timeout is not a terminal outcome. An interrupted native worker is detected from its process ID, start time and executable, not an old lock file. Do not retry a live request.
 
+## Sprite atlas output
+
+An Agent can use its available image generator to make an animation atlas, or its video generator to export frames. For an atlas, ask for a precise grid, one full subject per cell, identical scale/baseline and generous transparent margins. The Prompt determines the motion. Inspect all frames for identity, pose drift, anatomy and alpha edges; colored fringes are a failed candidate even if the file has an alpha channel.
+
+```powershell
+python tools/import_sprite_atlas.py --image C:\absolute\atlas.png --columns 4 --rows 2 --name "My pet" --slot click --fps 6 --output C:\absolute\candidate.lotheme
+```
+
+The importer reads cells left-to-right then top-to-bottom, retains RGBA pixels, pads cells to one canvas when the source dimensions do not divide evenly, and packages the first frame as `idle` plus the full sequence in the chosen action. The default action plays once; add `--loop` for a genuinely looping sequence. It refuses opaque/empty cells, visible edge clipping, identical frames and overwriting an existing candidate. A passed import is structural evidence, not visual approval. Use `theme_package.py pack-multi` when combining several motions.
+
+If a generation tool cannot produce clean alpha, an available background-removal tool can prepare the generated atlas before import. Preserve the grid and canvas during removal. Report the actual tools used; do not install local models as an assumed requirement of the default Agent route. Submit the candidate with `result` and return to native preview; never approve it automatically.
+
 ## Bundled local adapter
 
 `tools/configure_local_generator.ps1` configures existing local model installations. Supply actual absolute paths for `-Python` (CUDA torch/torchvision, transformers, Pillow and BiRefNet dependencies), `-ComfyDirectory`, `-ComfyPython`, `-WanModelDirectory`, `-MattingModelDirectory`, and optionally `-QwenModelDirectory`; also use `-Executable` / `-DataDirectory` when needed. It checks the environments and model paths before configuring the native runner. User photos are not sent to a cloud provider.

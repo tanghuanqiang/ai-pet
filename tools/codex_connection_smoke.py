@@ -5,6 +5,7 @@ No real Codex configuration or task transcripts are changed.
 """
 from __future__ import annotations
 import argparse
+import base64
 import json
 import os
 from pathlib import Path
@@ -32,15 +33,34 @@ def main() -> None:
                                '-Executable', exe, '-DataDirectory', str(data), '-Action', action, *extra],
                               env=env, check=True, capture_output=True, timeout=30)
     sentinel = {'hooks': [{'type': 'command', 'command': 'echo keep-user-hook'}]}
-    original = {'description': 'keep-user-metadata', 'hooks': {'Stop': [sentinel]}}
+    mixed_sentinel = {'matcher': '*', 'hooks': [{'type': 'command', 'command': 'echo keep-mixed-hook'}]}
+    original = {'description': 'keep-user-metadata', 'hooks': {'Stop': [sentinel], 'PreToolUse': [mixed_sentinel]}}
     hookpath = home / 'hooks.json'
-    hookpath.write_text(json.dumps(original), encoding='utf-8')
-    for _ in range(2):
-        command('codex-install', '-CodexHome', str(home))
+    fixture = json.loads(json.dumps(original))
+    legacy_script = "& '" + exe.replace("'", "''") + "' --codex-hook-relay '" + str(root).replace("'", "''") + "'"
+    legacy_command = 'powershell.exe -NoProfile -NonInteractive -EncodedCommand ' + base64.b64encode(legacy_script.encode('utf-16le')).decode()
+    legacy_handler = {'type': 'command', 'command': legacy_command, 'commandWindows': legacy_command, 'timeout': 3}
+    for event in ('UserPromptSubmit','PreToolUse','PostToolUse','PermissionRequest','Stop','Interrupt','SessionEnd'):
+        if event == 'PreToolUse': fixture['hooks'][event][0]['hooks'].append(legacy_handler)
+        else: fixture['hooks'].setdefault(event, []).append({'hooks': [legacy_handler]})
+    # Model an older installation without modifying an actual installation marker.
+    legacy_marker = args.executable.absolute().parent / 'codex-hook-registration.json'
+    if legacy_marker.exists(): raise AssertionError('use an isolated executable copy for legacy migration QA')
+    legacy_marker.write_text(json.dumps({'productId': 'little-orbit.ai-pet-studio', 'version': 1,
+        'codexHome': str(home), 'projectRoot': str(root), 'command': legacy_command}), encoding='utf-8')
+    hookpath.write_text(json.dumps(fixture), encoding='utf-8')
+    try:
+        for _ in range(2):
+            command('codex-install', '-CodexHome', str(home))
+    finally:
+        legacy_marker.unlink()
     config = json.loads(hookpath.read_text(encoding='utf-8-sig'))
     assert config['description'] == original['description']
     assert config['hooks']['Stop'][0] == sentinel and len(config['hooks']['Stop']) == 2
-    assert all(len(config['hooks'][event]) == 1 for event in config['hooks'] if event != 'Stop')
+    assert config['hooks']['PreToolUse'][0] == mixed_sentinel and len(config['hooks']['PreToolUse']) == 2
+    assert 'SessionEnd' not in config['hooks']
+    assert all(len(config['hooks'][event]) == 1 for event in config['hooks'] if event not in ('Stop', 'PreToolUse'))
+    assert legacy_command not in json.dumps(config)
     registered = json.loads(command('codex-status', '-CodexHome', str(home)).stdout)
     assert registered['registered']
     observer = config['hooks']['UserPromptSubmit'][0]['hooks'][0]['command'].split()
@@ -112,7 +132,8 @@ def main() -> None:
         result = {'passed': True, 'inputSource': 'documented-format fixtures', 'fiveStates': reports,
                   'customFinishMapping': True, 'runningPersists': True, 'foreignSessionIgnored': True,
                   'disconnectedIgnoresHooks': True, 'desktopLifecycleMapping': True,
-                  'unrelatedHooksPreserved': True, 'reinstallIdempotent': True, 'privatePayloadDiscarded': True}
+                  'unrelatedHooksPreserved': True, 'legacyHooksMigrated': True, 'mixedHookGroupPreserved': True,
+                  'reinstallIdempotent': True, 'privatePayloadDiscarded': True}
         (output / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
         print(json.dumps({'passed': True, 'result': str(output / 'result.json')}))
     finally:

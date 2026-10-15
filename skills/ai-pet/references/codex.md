@@ -25,4 +25,6 @@ Ordinary text questions are not automatically detected. Source silence does not 
 
 `codex-status` checks registration, not runtime trust or event delivery. Verify real delivery with `status` after actual lifecycle activity. The repository smoke test uses documented-format fixtures and does not by itself establish real Codex integration acceptance.
 
+When upgrading an older AI-PET installation, `codex-install` also recognizes that installation's `codex-hook-registration.json`. It migrates only the exact legacy command matching the selected executable, recorded project and Codex directory, including the old `SessionEnd` observer. Unrelated hooks and handlers sharing a group are preserved. The old marker is kept for recovery and `hooks.json` is backed up. Changed hook definitions still require Codex's own review and trust; migration never edits trust records.
+
 Disconnect with `-Action disconnect`. Remove only this adapter's hook groups with `-Action codex-remove`; unrelated hooks remain. Removal is separate from disconnect so the user can reconnect later without registering again.
