@@ -1,7 +1,7 @@
 ﻿param(
-    [ValidateSet('start','status','connect','disconnect','event','bind','build','requests','result','codex-connect','codex-install','codex-remove','codex-status')][string]$Action = 'status',
+    [ValidateSet('start','status','connect','disconnect','event','bind','build','requests','result','codex-connect','codex-install','codex-remove','codex-status','configure-generation','generate','cancel-generation','generation-status','create')][string]$Action = 'status',
     [string]$Tool, [string]$Session, [string]$State, [string]$Slot,
-    [string]$Executable, [string]$DataDirectory, [string]$RequestId, [string]$Theme, [string]$CodexHome
+    [string]$Executable, [string]$DataDirectory, [string]$RequestId, [string]$Theme, [string]$CodexHome, [string]$GeneratorConfig, [string]$CreationSpec
 )
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
@@ -44,26 +44,48 @@ try {
     elseif ($Action -eq 'disconnect') { $arguments = @('--ai-disconnect') }
     elseif ($Action -eq 'event') { $arguments = @('--ai-event', $Tool, $Session, $State) }
     elseif ($Action -eq 'bind') { $arguments = @('--ai-bind', $State, $Slot) }
+    elseif ($Action -eq 'configure-generation') {
+        if (-not (Test-Path -LiteralPath $GeneratorConfig -PathType Leaf)) { throw '请提供生成器配置文件。' }
+        $arguments = @('--ai-generator-config', ('"' + [IO.Path]::GetFullPath($GeneratorConfig) + '"'))
+    }
+    elseif ($Action -eq 'generate' -or $Action -eq 'cancel-generation') {
+        if ($RequestId -notmatch '\A[a-f0-9]{32}\z') { throw '请提供创作编号。' }
+        $command = if ($Action -eq 'generate') { '--ai-start-generation' } else { '--ai-cancel-generation' }
+        $arguments = @($command, $RequestId)
+    }
     elseif ($Action -eq 'result') {
         if ($RequestId -notmatch '\A[a-f0-9]{32}\z' -or -not (Test-Path -LiteralPath $Theme -PathType Leaf)) { throw '请提供创作编号和生成的主题包。' }
         $arguments = @('--ai-result', $RequestId, ('"' + [IO.Path]::GetFullPath($Theme) + '"'))
     }
     $statusFile = $null
-    if ($Action -eq 'status' -or $Action -eq 'requests') {
+    if ($Action -in @('status','requests','generation-status','create')) {
         $statusFile = Join-Path ([IO.Path]::GetTempPath()) ('ai-pet-status-' + [Guid]::NewGuid().ToString('N') + '.json')
         $command = if ($Action -eq 'requests') { '--ai-requests' } else { '--ai-status' }
         $arguments = @($command, ('"' + $statusFile + '"'))
-    } elseif ($Action -ne 'result') {
+        if ($Action -eq 'generation-status') {
+            if ($RequestId -notmatch '\A[a-f0-9]{32}\z') { throw '请提供创作编号。' }
+            $arguments = @('--ai-generation-status', $RequestId, ('"' + $statusFile + '"'))
+        }
+        if ($Action -eq 'create') {
+            if (-not (Test-Path -LiteralPath $CreationSpec -PathType Leaf)) { throw '请提供包含 photos 和 prompt 的 JSON 文件。' }
+            $arguments = @('--ai-create-request', ('"' + [IO.Path]::GetFullPath($CreationSpec) + '"'), ('"' + $statusFile + '"'))
+        }
+    } elseif ($Action -notin @('result','configure-generation')) {
         foreach ($value in $arguments | Select-Object -Skip 1) {
             if ($value -notmatch '\A[a-zA-Z0-9][a-zA-Z0-9._-]{0,95}\z') { throw '请提供合法的工具、会话、状态或动作标识。' }
         }
     }
-    $process = Start-Process -FilePath $Executable -ArgumentList $arguments -Wait -PassThru -WindowStyle Hidden
+    $process = Start-Process -FilePath $Executable -ArgumentList $arguments -PassThru -WindowStyle Hidden
+    # Wait for this command only; Start-Process -Wait also waits for generation descendants.
+    $process.WaitForExit()
     if ($process.ExitCode -ne 0) { throw "桌宠命令失败，退出码 $($process.ExitCode)。" }
     if ($statusFile) {
         Get-Content -LiteralPath $statusFile -Raw -Encoding UTF8
         Remove-Item -LiteralPath $statusFile
     } elseif ($Action -eq 'result') { Write-Output '候选已提交，请在桌宠中预览并选择使用。' }
+    elseif ($Action -eq 'generate') { Write-Output '已启动生成；用 generation-status 查询进度。' }
+    elseif ($Action -eq 'cancel-generation') { Write-Output '已请求取消当前生成。' }
+    elseif ($Action -eq 'configure-generation') { Write-Output '生成器已配置。' }
     elseif ($Action -eq 'event') { Write-Output '已发送；仅由匹配工具和会话的运行中桌宠接收。' }
     else { Write-Output '配置已保存。' }
 } finally { $env:AI_PET_DATA_DIR = $previousDataDirectory }

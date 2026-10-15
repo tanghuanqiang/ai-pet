@@ -11,6 +11,8 @@ Use the repository's commands instead of automating tray clicks. The product has
 
 Locate the user's AI-PET checkout or installed release. For a checkout, the command wrapper is `tools/ai-pet.ps1`. This Skill may be copied independently of the repository, so locate the checkout explicitly; do not assume the Skill's parent is the checkout. Do not download from an invented repository URL.
 
+The canonical public repository is https://github.com/tanghuanqiang/ai-pet. If no installation exists, retrieve an actual published Windows release from that repository (preview releases are currently used), or clone its source and build. Resolve download names and URLs from the repository's real release metadata. Run the package's installer, then use the installed command wrapper and retain the installed generation-adapter files if configuring a backend.
+
 On Windows with the .NET Framework desktop components, build the checkout using:
 
 ```powershell
@@ -45,7 +47,9 @@ For Codex, read [the Codex adapter instructions](references/codex.md) and use `-
 
 ## Customize
 
-The native **自定义宠物和动作** page accepts 1–4 photos and a prompt in the same window. **保存给 Agent 制作** stores a local creation request; it does not start a model on its own. To process a pending request, run:
+The default creation route is the user's existing Agent and generation tools. The native **自定义宠物和动作** page accepts 1–4 photos and a prompt. **交给我的 Agent 制作** saves the request and copies instructions for the user to paste into their Agent conversation. It does not launch or message an Agent. Use the exact request ID, executable and data directory in those instructions; they take precedence over choosing the newest request. No local model installation is required for this route.
+
+To process a pending request, run:
 
 ```powershell
 .\tools\ai-pet.ps1 -Action requests
@@ -61,7 +65,9 @@ Submit the resulting theme without installing it:
 .\tools\ai-pet.ps1 -Action result -RequestId REQUEST_ID -Theme C:\absolute\path\candidate.lotheme
 ```
 
-The user can then choose **查看 Agent 生成的动作** in the same manager and preview before use. The Release ZIP contains the desktop interface and Skill; retrieve the repository source if frame-packaging utilities are needed.
+The user can then choose **预览生成的动作** in the same manager and preview before use. The Release ZIP includes the native interface, Skill, optional local generation adapter and frame-packaging utilities; model weights and Python environments are separate.
+
+If the user already has an automatable generation tool, optionally configure it once using [generation setup](references/generation.md). The native primary button then becomes **生成动作**, with progress, cancellation and retry. Only configure an actually available provider; connecting Codex task states does not itself supply an image or animation generator. A backend declares its reference limit (1–4); the optional local Wan/Qwen backend supports one photo, or up to three when Qwen is configured. Do not claim multi-image fusion if only the first reference is used.
 
 The optional **使用本机眨眼、歪头模板 → 打开创作空间** route provides the existing local model controls. Explain which backend actually supports the requested motion. Existing local templates cover blink and head tilt; writing arbitrary text alone does not generate arbitrary motion, and those templates process the main image rather than fusing multiple views.
 

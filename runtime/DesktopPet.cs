@@ -3709,7 +3709,7 @@ namespace AIPet.Desktop
                 if (!ReviewThemePackage(candidate, installRole))
                 {
                     File.Delete(stagedPath);
-                    trayIcon.ShowBalloonTip(1800, "候选主题已放弃", "活动主题未更改。", Forms.ToolTipIcon.Info);
+                    trayIcon.ShowBalloonTip(1800, "暂未使用新动作", "当前宠物没有改变，可以修改后重做或稍后再预览。", Forms.ToolTipIcon.Info);
                     return;
                 }
                 EnsureReviewedThemeUnchanged(stagedPath, reviewedThemeHash);
@@ -3729,7 +3729,7 @@ namespace AIPet.Desktop
                 if (reviewSavedThemeItem != null) reviewSavedThemeItem.Enabled = false;
                 RebuildRuntimeWindow();
                 trayIcon.Text = "AI Pet Studio · 本地主题陪伴";
-                trayIcon.ShowBalloonTip(2200, "主题已安装", candidate.Name + " 已在本机启用。", Forms.ToolTipIcon.Info);
+                trayIcon.ShowBalloonTip(2200, "已使用新动作", candidate.Name + " 已在桌面启用。", Forms.ToolTipIcon.Info);
             }
             catch (Exception error)
             {
@@ -3823,15 +3823,16 @@ namespace AIPet.Desktop
 
         private static string ThemeEventReviewNote(string slot)
         {
-            string common = "逐项检查身份、动作、时序和透明边缘；动画至少播放一遍后才能确认。";
+            string common = "请看完一遍，确认形象、动作和轮廓符合预期。";
+            if (slot == "ambient") return "这是宠物日常自由活动时的动作。" + common;
             if (slot == "recent-activity")
-                return "近期活动只表示收到 Codex Hook 活动，或所选 Codex Desktop 会话的 task_started / 已完成工具 item_completed；不代表正在思考或工作质量。" + common;
+                return "连接工具后，任务进行中可以播放这个动作。" + common;
             if (slot == "needs-user")
-                return "此槽只响应同会话的 Codex Hook PermissionRequest。当前 Desktop 本机日志没有权限请求事件；Hook 需在 Codex 中获信任且实际触发，桌宠提示不能代替审批。" + common;
+                return "工具明确需要你回答或确认时，可以播放这个动作。" + common;
             if (slot == "stop-unknown")
-                return "Codex Hook Stop 或 Desktop task_complete 只证明轮次结束，结果未知；此动作不得庆祝成功。" + common;
+                return "任务结束时可以播放这个动作；结束不代表成功。" + common;
             if (slot == "interrupt")
-                return "只响应 Codex Hook Interrupt 或 Desktop turn_aborted(reason=interrupted)，不从普通等待推断中断。" + common;
+                return "任务暂停或被中断时，可以播放这个动作。" + common;
             throw new InvalidDataException("事件审核槽不受支持。");
         }
 
@@ -3843,7 +3844,7 @@ namespace AIPet.Desktop
             for (int i = 0; i < candidate.Actions.Count; i++)
                 if (candidate.Actions[i].Slot != "idle") reviewActions.Add(candidate.Actions[i]);
             Window review = new Window();
-            review.Title = "审核本地主题候选";
+            review.Title = "预览宠物和动作";
             review.Width = 650;
             review.Height = 600;
             review.ResizeMode = ResizeMode.NoResize;
@@ -3873,13 +3874,13 @@ namespace AIPet.Desktop
             StackPanel heading = new StackPanel();
             heading.Margin = new Thickness(16, 8, 16, 0);
             TextBlock title = new TextBlock();
-            title.Text = "检查 190px 桌面预览";
+            title.Text = "看看宠物在桌面上的样子";
             title.FontSize = 16;
             title.FontWeight = FontWeights.SemiBold;
             title.Foreground = new SolidColorBrush(MediaColor.FromRgb(52, 48, 41));
             heading.Children.Add(title);
             TextBlock subtitle = new TextBlock();
-            subtitle.Text = candidate.Name + " · idle · " + idle.Frames.Count + " 帧 · " + idle.FramesPerSecond + " fps";
+            subtitle.Text = candidate.Name;
             subtitle.FontSize = 11;
             subtitle.Foreground = new SolidColorBrush(MediaColor.FromRgb(132, 125, 111));
             heading.Children.Add(subtitle);
@@ -3892,8 +3893,7 @@ namespace AIPet.Desktop
             for (int i = 0; i < reviewActions.Count; i++)
             {
                 ThemeAction action = reviewActions[i];
-                string label = ThemeSlotLabel(action.Slot);
-                actionSelector.Items.Add(label + " · " + action.Slot + " · " + action.Frames.Count + " 帧");
+                actionSelector.Items.Add(SimpleActionLabel(action.Slot));
             }
             Grid.SetRow(actionSelector, 1);
             layout.Children.Add(actionSelector);
@@ -3913,11 +3913,8 @@ namespace AIPet.Desktop
             TextBlock reviewNote = new TextBlock();
             RoleCard comparedRole = targetRole ?? activeRole;
             string identityNote = comparedRole == null ?
-                "当前没有导入角色卡；安装后若切换角色，主题会暂停。" :
-                "请与" + (comparedRole == pendingRole ? "待制作" : "当前") + "角色「" + comparedRole.Name +
-                "」的照片核对身份。" + (comparedRole == pendingRole ? "安装通过后才会切换桌面角色。" : "");
-            reviewNote.Text = "结构校验不代表视觉合格。" + identityNote +
-                "逐项检查动作、循环和透明边缘；每个动画至少播放一遍后才能确认。";
+                "看看形象和动作是否符合你的预期。" : "请对照「" + comparedRole.Name + "」的参考照片检查形象。";
+            reviewNote.Text = identityNote + "请看完每个动作，确认动作和轮廓都符合预期，满意后再使用。";
             reviewNote.FontSize = 11;
             reviewNote.TextWrapping = TextWrapping.Wrap;
             reviewNote.VerticalAlignment = VerticalAlignment.Center;
@@ -3929,7 +3926,7 @@ namespace AIPet.Desktop
             StackPanel reviewControls = new StackPanel();
             reviewControls.Margin = new Thickness(16, 0, 16, 0);
             CheckBox reviewed = new CheckBox();
-            reviewed.Content = "我已检查当前动作的身份、时序和三种背景下的边缘";
+            reviewed.Content = "这个动作的形象、动作和轮廓都符合预期";
             reviewed.FontSize = 11;
             reviewed.VerticalAlignment = VerticalAlignment.Center;
             reviewControls.Children.Add(reviewed);
@@ -3946,13 +3943,13 @@ namespace AIPet.Desktop
             buttons.HorizontalAlignment = HorizontalAlignment.Right;
             buttons.Margin = new Thickness(16, 0, 16, 0);
             Button cancel = new Button();
-            cancel.Content = "放弃候选";
+            cancel.Content = "返回修改";
             cancel.Width = 94;
             cancel.Margin = new Thickness(0, 0, 8, 0);
             cancel.IsCancel = true;
             buttons.Children.Add(cancel);
             Button install = new Button();
-            install.Content = "安装主题";
+            install.Content = "使用这只宠物";
             install.Width = 104;
             install.IsDefault = true;
             install.IsEnabled = false;
@@ -3973,7 +3970,7 @@ namespace AIPet.Desktop
             Action refreshReviewState = delegate
             {
                 install.IsEnabled = reviewedSlots.Count == reviewActions.Count;
-                reviewProgress.Text = "已确认 " + reviewedSlots.Count + " / " + reviewActions.Count + " 个动作；全部确认后才能安装。";
+                reviewProgress.Text = "已确认 " + reviewedSlots.Count + " / " + reviewActions.Count + " 个动作；全部确认后可使用。";
             };
             previewTimer.Tick += delegate
             {
@@ -3994,10 +3991,9 @@ namespace AIPet.Desktop
                 selectedAction = reviewActions[actionSelector.SelectedIndex];
                 reviewFrameIndex = 0;
                 reviewNote.Text = identityNote + (selectedAction.Slot == "idle" || selectedAction.Slot == "hover" || selectedAction.Slot == "click"
-                    ? "结构校验不代表视觉合格。逐项检查身份、动作、循环和透明边缘；每个动画至少播放一遍后才能确认该动作。"
+                    ? "请看完这个动作，确认形象、动作和轮廓符合预期。"
                     : ThemeEventReviewNote(selectedAction.Slot));
-                subtitle.Text = candidate.Name + " · " + selectedAction.Slot + " · " + selectedAction.Frames.Count
-                    + " 帧 · " + selectedAction.FramesPerSecond + " fps";
+                subtitle.Text = candidate.Name;
                 for (int i = 0; i < previewImages.Count; i++) previewImages[i].Source = selectedAction.Frames[0];
                 changingAction = true;
                 reviewed.IsChecked = reviewedSlots.Contains(selectedAction.Slot);

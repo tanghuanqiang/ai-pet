@@ -26,6 +26,7 @@ namespace AIPet.Desktop
         private static string experienceRoot, aiConfigurationPath, aiEventsPath;
         private static readonly List<string> creationPhotos = new List<string>();
         private static string latestCreationRequest;
+        private static string creationDraftPrompt;
         private static string connectedAiTool, connectedAiSession, lastAiState, lastAiOutcome;
         private static long aiConnectedAt;
         private static string aiConfigurationText;
@@ -104,7 +105,16 @@ namespace AIPet.Desktop
             List<object> actions = new List<object>();
             if (activeTheme != null) foreach (ThemeAction action in activeTheme.Actions)
                 actions.Add(new { slot = action.Slot, label = SimpleActionLabel(action.Slot) });
+            object generator = null;
+            try {
+                string generatorPath = Path.Combine(experienceRoot, "generator.json");
+                if (File.Exists(generatorPath)) {
+                    Dictionary<string, object> configured = ReadGenerator(generatorPath);
+                    generator = new { name = configured["name"], maxReferences = configured["maxReferences"], dataHandling = configured["dataHandling"] };
+                }
+            } catch (Exception) { }
             return new { version = 1, states = AiStates, tool = connectedAiTool, session = connectedAiSession,
+                generationProtocolVersion = 1, generator = generator, defaultCreationMode = generator == null ? "agent-handoff" : "configured-generator",
                 bindings = aiBindings, actions = actions, lastState = lastAiState, lastOutcome = lastAiOutcome,
                 activeSlot = activeThemeAction == null ? null : activeThemeAction.Slot,
                 dataDirectory = experienceRoot, runtimeRunning = window != null && !exiting, checkedAtMs = CurrentUnixMilliseconds(),
@@ -128,7 +138,27 @@ namespace AIPet.Desktop
             try
             {
                 if (args[0] == "--ai-codex-hook" && args.Length == 1) RecordSimpleCodexHook();
+                else if (args[0] == "--ai-test-generation-review" && args.Length == 3) TestGenerationReview(args[1], Path.GetFullPath(args[2]));
+                else if (args[0] == "--ai-test-generate-click" && args.Length == 3) TestGenerateClick(Path.GetFullPath(args[1]), Path.GetFullPath(args[2]));
                 else if (args[0] == "--ai-codex-connect" && args.Length == 2) ConnectSimpleCodex(args[1]);
+                else if (args[0] == "--ai-create-request" && args.Length == 3) {
+                    Dictionary<string, object> spec = new JavaScriptSerializer().DeserializeObject(ReadBoundedJson(Path.GetFullPath(args[1]))) as Dictionary<string, object>;
+                    List<string> photos = new List<string>();
+                    foreach (object photo in (object[])spec["photos"]) photos.Add((string)photo);
+                    string id = SaveCreationRequest(photos, ReadString(spec, "prompt"));
+                    File.WriteAllText(Path.GetFullPath(args[2]), new JavaScriptSerializer().Serialize(new { id = id }), new UTF8Encoding(false));
+                }
+                else if (args[0] == "--ai-generator-config" && args.Length == 2) {
+                    Dictionary<string, object> generator = ReadGenerator(Path.GetFullPath(args[1]));
+                    Directory.CreateDirectory(experienceRoot);
+                    WriteCodexEventAtomically(Path.Combine(experienceRoot, "generator.json"), new JavaScriptSerializer().Serialize(generator));
+                }
+                else if (args[0] == "--ai-start-generation" && args.Length == 2) StartGeneration(args[1]);
+                else if (args[0] == "--ai-generate" && args.Length == 2) RunGeneration(args[1]);
+                else if (args[0] == "--ai-cancel-generation" && args.Length == 2)
+                    File.WriteAllText(Path.Combine(CreationFolder(args[1]), "cancel-generation"), "cancel");
+                else if (args[0] == "--ai-generation-status" && args.Length == 3)
+                    File.WriteAllText(Path.GetFullPath(args[2]), new JavaScriptSerializer().Serialize(GenerationStatus(args[1])), new UTF8Encoding(false));
                 else if (args[0] == "--ai-connect" && args.Length == 3) SaveAiConnection(args[1], args[2]);
                 else if (args[0] == "--ai-disconnect" && args.Length == 1) SaveAiConnection(null, null);
                 else if (args[0] == "--ai-bind" && args.Length == 3)
@@ -177,7 +207,9 @@ namespace AIPet.Desktop
                         if (!Regex.IsMatch(Path.GetFileName(folder), @"\A[a-f0-9]{32}\z")) continue;
                         string request = Path.Combine(folder, "request.json");
                         if (File.Exists(request)) requests.Add(new { id = Path.GetFileName(folder), request = request,
-                            status = File.Exists(Path.Combine(folder, "candidate.lotheme")) ? "ready" : "pending" });
+                            instructions = Path.Combine(folder, "agent-instructions.txt"),
+                            status = File.Exists(Path.Combine(folder, "candidate.lotheme")) ? "ready" : "pending",
+                            generation = GenerationStatus(Path.GetFileName(folder)) });
                     }
                     File.WriteAllText(Path.GetFullPath(args[1]), new JavaScriptSerializer().Serialize(requests), new UTF8Encoding(false));
                 }
@@ -361,46 +393,116 @@ namespace AIPet.Desktop
                 Background = new SolidColorBrush(Color.FromRgb(250, 248, 244)), FontFamily = new FontFamily("Microsoft YaHei UI") };
             petManager.Closed += delegate { petManager = null; petManagerTabs = null; };
             petManagerTabs = new TabControl { Margin = new Thickness(12), FontSize = 14 };
+            string savedCreationPrompt = creationDraftPrompt ?? "";
+            if (latestCreationRequest == null) latestCreationRequest = LatestCreationId();
+            if (latestCreationRequest != null) {
+                try {
+                    string folder = CreationFolder(latestCreationRequest);
+                    Dictionary<string, object> saved = new JavaScriptSerializer().DeserializeObject(ReadBoundedJson(Path.Combine(folder, "request.json"))) as Dictionary<string, object>;
+                    savedCreationPrompt = creationDraftPrompt ?? ReadString(saved, "prompt");
+                    if (creationPhotos.Count == 0) foreach (Dictionary<string, object> photo in (object[])saved["references"]) {
+                        string name = ReadString(photo, "path");
+                        if (Regex.IsMatch(name, @"\Areference-[1-4]\.(png|jpg|jpeg)\z")) creationPhotos.Add(Path.Combine(folder, name));
+                    }
+                } catch (Exception) { }
+            }
             StackPanel custom = ManagerPage("自定义宠物和动作", "添加照片，写下想让它做的动作。预览满意后，再换到桌面上。");
-            TextBlock photoCount = ManagerText("选择 1–4 张参考图片", false);
+            TextBlock photoCount = ManagerText(creationPhotos.Count == 0 ? "选择 1–4 张参考图片" : "已选择 " + creationPhotos.Count + " 张图片", false);
             custom.Children.Add(ManagerButton("添加参考图片…", delegate {
                 using (Forms.OpenFileDialog picker = new Forms.OpenFileDialog()) {
                     picker.Filter = "宠物图片|*.png;*.jpg;*.jpeg"; picker.Multiselect = true;
                     if (picker.ShowDialog() != Forms.DialogResult.OK) return;
                     if (picker.FileNames.Length > 4) throw new InvalidDataException("最多选择四张参考图片。");
+                    if (File.Exists(Path.Combine(experienceRoot, "generator.json"))) {
+                        int maximum = Convert.ToInt32(ReadGenerator(Path.Combine(experienceRoot, "generator.json"))["maxReferences"], CultureInfo.InvariantCulture);
+                        if (picker.FileNames.Length > maximum) throw new InvalidDataException("当前生成器最多支持 " + maximum + " 张图片；也可以让 Agent 配置支持更多参考图的生成器。");
+                    }
                     foreach (string photo in picker.FileNames) ValidateCreationPhoto(photo);
                     creationPhotos.Clear(); creationPhotos.AddRange(picker.FileNames);
                     photoCount.Text = "已选择 " + creationPhotos.Count + " 张图片";
                 }
             }));
             custom.Children.Add(photoCount);
-            TextBox creationPrompt = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 90,
+            TextBox creationPrompt = new TextBox { Text = savedCreationPrompt, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 90,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto, MaxLength = 2000, Margin = new Thickness(0, 0, 0, 12) };
             custom.Children.Add(ManagerText("描述想要的宠物和动作", false)); custom.Children.Add(creationPrompt);
-            TextBlock creationStatus = ManagerText("交给你的 Agent 使用 AI-PET Skill 制作；生成后回到这里预览使用。", false);
-            custom.Children.Add(ManagerButton("保存给 Agent 制作", delegate {
+            petManager.Closed += delegate { creationDraftPrompt = creationPrompt.Text; };
+            TextBlock generatorDescription = ManagerText("", false); custom.Children.Add(generatorDescription);
+            TextBlock creationStatus = ManagerText("添加图片和描述后，交给自己的 Agent 制作。", false);
+            Button generate = null;
+            generate = ManagerButton("生成动作", delegate {
                 try {
+                    bool configured = File.Exists(Path.Combine(experienceRoot, "generator.json"));
+                    if (configured) ReadGenerator(Path.Combine(experienceRoot, "generator.json"));
                     latestCreationRequest = SaveCreationRequest(creationPhotos, creationPrompt.Text);
-                    creationStatus.Text = "已保存。告诉你的 Agent：使用 $ai-pet 完成待制作的宠物动作。";
+                    if (configured) {
+                        StartGeneration(latestCreationRequest); generate.IsEnabled = false; creationStatus.Text = "正在启动生成…";
+                    } else {
+                        CopyCreationHandoff(latestCreationRequest);
+                        creationStatus.Text = "制作说明已复制，粘贴给你的 Agent 即可；完成后回到这里预览。";
+                    }
                 } catch (Exception error) { creationStatus.Text = error.Message; }
-            }));
+            });
+            custom.Children.Add(generate);
             custom.Children.Add(creationStatus);
-            Button creationResult = ManagerButton("查看 Agent 生成的动作…", delegate {
+            WrapPanel generationControls = new WrapPanel();
+            Button retry = ManagerButton("重试生成", delegate {
+                try { StartGeneration(latestCreationRequest); creationStatus.Text = "正在重新生成…"; }
+                catch (Exception error) { creationStatus.Text = error.Message; }
+            });
+            Button cancel = ManagerButton("取消生成", delegate {
+                try { File.WriteAllText(Path.Combine(CreationFolder(latestCreationRequest), "cancel-generation"), "cancel"); creationStatus.Text = "正在取消…"; }
+                catch (Exception error) { creationStatus.Text = error.Message; }
+            });
+            Button creationResult = ManagerButton("预览生成的动作…", delegate {
                 string request = LatestCreationCandidate();
-                if (request == null) throw new InvalidOperationException("还没有生成结果。先让 Agent 使用 $ai-pet 完成待制作请求。");
+                if (request == null) throw new InvalidOperationException("还没有可预览的生成结果。");
                 ImportCreationCandidate(request);
             });
             creationResult.IsEnabled = LatestCreationCandidate() != null;
-            custom.Children.Add(creationResult);
+            retry.Visibility = cancel.Visibility = Visibility.Collapsed;
+            generationControls.Children.Add(creationResult); generationControls.Children.Add(cancel); generationControls.Children.Add(retry);
+            custom.Children.Add(generationControls);
+            StackPanel agentGeneration = new StackPanel();
+            agentGeneration.Children.Add(ManagerButton("复制制作说明", delegate {
+                try {
+                    if (latestCreationRequest == null) latestCreationRequest = SaveCreationRequest(creationPhotos, creationPrompt.Text);
+                    CopyCreationHandoff(latestCreationRequest);
+                    creationStatus.Text = "制作说明已复制，粘贴给你的 Agent 即可。";
+                } catch (Exception error) { creationStatus.Text = error.Message; }
+            }));
+            Expander agentInstructions = new Expander { Header = "制作说明", Content = agentGeneration, Margin = new Thickness(0, 0, 0, 12) };
+            custom.Children.Add(agentInstructions);
             System.Windows.Threading.DispatcherTimer creationRefresh = new System.Windows.Threading.DispatcherTimer();
             creationRefresh.Interval = TimeSpan.FromSeconds(2);
-            creationRefresh.Tick += delegate {
+            Action refreshCreation = delegate {
                 try {
-                    bool ready = LatestCreationCandidate() != null;
-                    creationResult.IsEnabled = ready;
-                    if (ready) creationStatus.Text = "动作已生成，可以预览并选择使用。";
-                } catch (Exception) { creationResult.IsEnabled = false; }
+                    bool configured = File.Exists(Path.Combine(experienceRoot, "generator.json"));
+                    if (configured) {
+                        Dictionary<string, object> backend = ReadGenerator(Path.Combine(experienceRoot, "generator.json"));
+                        generatorDescription.Text = "生成器：" + ReadString(backend, "name") + "（最多 " + backend["maxReferences"] + " 张参考图）· " + ReadString(backend, "dataHandling");
+                    } else generatorDescription.Text = "默认交给自己的 Agent：复制制作说明，粘贴到它的会话。无需安装本机模型。";
+                    generate.Content = configured ? "生成动作" : "交给我的 Agent 制作";
+                    if (latestCreationRequest == null) latestCreationRequest = LatestCreationId();
+                    bool running = false;
+                    if (latestCreationRequest != null) {
+                        JavaScriptSerializer serializer = new JavaScriptSerializer();
+                        Dictionary<string, object> state = serializer.DeserializeObject(serializer.Serialize(GenerationStatus(latestCreationRequest))) as Dictionary<string, object>;
+                        running = state.ContainsKey("running") && (bool)state["running"];
+                        string status = ReadString(state, "status");
+                        if (configured) generate.Content = status == "ready" ? "重新生成" : "生成动作";
+                        else generate.Content = status == "ready" ? "制作新的动作" : "交给我的 Agent 制作";
+                        creationStatus.Text = !configured && status == "pending" ? "等待 Agent 制作；把制作说明粘贴给它，完成后回来预览。" : ReadString(state, "message");
+                        creationResult.IsEnabled = status == "ready";
+                        cancel.Visibility = running ? Visibility.Visible : Visibility.Collapsed;
+                        retry.Content = status == "pending" ? "生成这个请求" : "重试生成";
+                        retry.Visibility = configured && !running && status != "ready" ? Visibility.Visible : Visibility.Collapsed;
+                    }
+                    generate.IsEnabled = !running;
+                    agentInstructions.Visibility = latestCreationRequest != null || configured ? Visibility.Visible : Visibility.Collapsed;
+                } catch (Exception error) { creationResult.IsEnabled = false; creationStatus.Text = error.Message; }
             };
+            creationRefresh.Tick += delegate { refreshCreation(); }; refreshCreation();
             creationRefresh.Start(); petManager.Closed += delegate { creationRefresh.Stop(); };
             Expander localCreator = new Expander { Header = "使用本机眨眼、歪头模板", Content = ManagerButton("打开创作空间", OpenSimpleCreator), Margin = new Thickness(0, 0, 0, 12) };
             custom.Children.Add(localCreator);
@@ -565,11 +667,43 @@ namespace AIPet.Desktop
             WriteCodexEventAtomically(Path.Combine(folder, "request.json"), new JavaScriptSerializer().Serialize(new {
                 version = 1, id = id, prompt = prompt.Trim(), references = references, createdAtMs = CurrentUnixMilliseconds(),
                 target = "transparent-desktop-pet", review = "required" }));
+            WriteCodexEventAtomically(Path.Combine(folder, "agent-instructions.txt"), CreationHandoff(id));
             return id;
+        }
+
+        private static string CreationHandoff(string id)
+        {
+            string folder = CreationFolder(id);
+            return "请使用 $ai-pet Skill 制作这份桌宠动作请求。\r\n"
+                + "Skill 来源：https://github.com/tanghuanqiang/ai-pet/tree/main/skills/ai-pet\r\n"
+                + "创作编号：" + id + "\r\n"
+                + "请求文件：" + Path.Combine(folder, "request.json") + "\r\n"
+                + "桌宠程序：" + System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName + "\r\n"
+                + "数据目录：" + experienceRoot + "\r\n"
+                + "读取请求中的全部参考图并校验 SHA-256，按其中的 Prompt 使用你已有的图像/动画生成工具制作透明动作。"
+                + "若工具不可用，请明确告诉我缺少什么。将候选主题通过 ai-pet result 提交到上述编号，使用相同桌宠程序和数据目录。"
+                + "完成后我会在桌宠中预览并选择使用。";
+        }
+
+        private static void CopyCreationHandoff(string id)
+        {
+            string instructions = CreationHandoff(id);
+            WriteCodexEventAtomically(Path.Combine(CreationFolder(id), "agent-instructions.txt"), instructions);
+            try { System.Windows.Clipboard.SetText(instructions); }
+            catch (Exception) { throw new InvalidOperationException("请求已保存，剪贴板暂时不可用，请稍后点击“复制制作说明”。"); }
         }
 
         private static string LatestCreationCandidate()
         {
+            string id = LatestCreationId();
+            if (id == null) return null;
+            string result = Path.Combine(experienceRoot, "creation-requests", id, "candidate.lotheme");
+            return File.Exists(result) ? result : null;
+        }
+
+        private static string LatestCreationId()
+        {
+            if (latestCreationRequest != null) return File.Exists(Path.Combine(experienceRoot, "creation-requests", latestCreationRequest, "request.json")) ? latestCreationRequest : null;
             string root = Path.Combine(experienceRoot, "creation-requests");
             if (!Directory.Exists(root)) return null;
             string[] folders = Directory.GetDirectories(root);
@@ -577,8 +711,7 @@ namespace AIPet.Desktop
             foreach (string folder in folders) {
                 if (latestCreationRequest != null && Path.GetFileName(folder) != latestCreationRequest) continue;
                 if (!File.Exists(Path.Combine(folder, "request.json"))) continue;
-                string result = Path.Combine(folder, "candidate.lotheme");
-                return File.Exists(result) ? result : null;
+                return Path.GetFileName(folder);
             }
             return null;
         }
