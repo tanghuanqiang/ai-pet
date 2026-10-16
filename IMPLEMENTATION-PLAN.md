@@ -149,3 +149,9 @@
 依据：[DWM 窗口属性](https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute)、[Mica 材质](https://learn.microsoft.com/en-us/windows/apps/design/style/mica)。隔离外观检查覆盖两套颜色、下拉打开与动作绑定以及系统通知重新取色；本机高对比度和旧版 Windows 未切换实测。
 
 已完成完整桌面回归、公开包外观与五状态播放检查，并发布 [v0.3.0-preview.7](https://github.com/tanghuanqiang/ai-pet/releases/tag/v0.3.0-preview.7)。本机安装已更新并打开新版管理窗口；照片、主题、偏好、连接和审核记录等九项文件校验保持一致，重启后真实当前 Codex 会话继续触发原宠物动作。实际窗口读取到深色标题栏、圆角及 Mica 属性均已启用。Windows ZIP SHA-256 为 `f4802726a3e3910b3402da5c3f483cced8b52f9bf2085bf142daf8ea103efed2`，Skill 为 `06d53a98972cb7688aebf4e11e66e1dae94ff34c0a657ef86048c393efc7c0cb`，均与远端附件一致。验证和私有备份存于 `generated/appearance-20261017/`，不进入公开源码。
+
+## 2026-10-17 Codex 会话标题
+
+用户反馈会话指纹无法辨认。连接选择改为聊天标题、项目和时间，已连接卡片同步显示标题；本机标题索引按文件变化缓存刷新，改名后更新。读取限定于标题元数据，忽略损坏行并限制索引读取量；没有标题则显示“未命名会话”，不读取 Prompt 或任务正文来代替标题。内部精确标识和五状态协议不变。同一桌面会话生成的状态摘要不再作为独立连接选项重复出现。
+
+隔离检查覆盖中文／emoji 标题、重名区分、缺失名称、损坏与半写入索引行、改名刷新、索引删除降级、选择后的准确绑定，以及连接卡片不展示指纹。真实当前会话标题索引可用。记录位于 `generated/session-titles-20261017/`，不公开本机标题或测试记录。

@@ -59,7 +59,7 @@ $runningPreview = Get-Process -Name 'AIPetDesktop' -ErrorAction SilentlyContinue
 if ($runningPreview) {
     throw 'Close the running desktop preview from its tray menu before rebuilding.'
 }
-$arguments = @('/nologo', '/target:winexe', "/out:$exePath", ('/win32manifest:' + (Join-Path $runtimeRoot 'app.manifest'))) + ($references | ForEach-Object { "/reference:$_" }) + @($sourcePath, (Join-Path $runtimeRoot 'PetExperience.cs'), (Join-Path $runtimeRoot 'PetCodex.cs'), (Join-Path $runtimeRoot 'PetGeneration.cs'), (Join-Path $runtimeRoot 'PetDisplay.cs'), (Join-Path $runtimeRoot 'PetAppearance.cs'))
+$arguments = @('/nologo', '/target:winexe', "/out:$exePath", ('/win32manifest:' + (Join-Path $runtimeRoot 'app.manifest'))) + ($references | ForEach-Object { "/reference:$_" }) + @($sourcePath, (Join-Path $runtimeRoot 'PetExperience.cs'), (Join-Path $runtimeRoot 'PetCodex.cs'), (Join-Path $runtimeRoot 'PetGeneration.cs'), (Join-Path $runtimeRoot 'PetDisplay.cs'), (Join-Path $runtimeRoot 'PetAppearance.cs'), (Join-Path $runtimeRoot 'PetCodexTitles.cs'))
 & $compiler @arguments
 if ($LASTEXITCODE -ne 0) { throw "C# compilation failed with exit code $LASTEXITCODE" }
 Copy-Item -LiteralPath (Join-Path $runtimeRoot 'AIPetDesktop.exe.config') -Destination ($exePath + '.config') -Force
@@ -124,6 +124,25 @@ $appearanceProcess = Start-Process -FilePath $exePath -ArgumentList @('--ai-test
 if ($appearanceProcess.ExitCode -ne 0) { throw 'Modern appearance checks failed.' }
 $appearanceResult = Get-Content -LiteralPath (Join-Path $appearanceRoot 'result.json') -Raw | ConvertFrom-Json
 if (-not $appearanceResult.passed -or -not $appearanceResult.systemNotificationRefresh) { throw 'Modern appearance assertions failed.' }
+$titleData = Join-Path $smokeDataRoot 'title-data'
+$priorTitleData = $env:AI_PET_DATA_DIR
+$priorTitleHome = $env:CODEX_HOME
+$priorTitleEvents = $env:AI_PET_EVENT_DIR
+try {
+    $env:AI_PET_DATA_DIR = $titleData
+    $env:CODEX_HOME = Join-Path $titleData 'codex'
+    $env:AI_PET_EVENT_DIR = Join-Path $titleData 'codex-events'
+    $titleRoot = Join-Path $smokeDataRoot 'session-titles'
+    $titleProcess = Start-Process -FilePath $exePath -ArgumentList @('--ai-test-session-titles', $titleRoot) -PassThru -Wait -WindowStyle Hidden
+    if ($titleProcess.ExitCode -ne 0) { throw 'Codex title checks failed.' }
+    $titleResult = Get-Content -LiteralPath (Join-Path $titleRoot 'result.json') -Raw | ConvertFrom-Json
+    if (-not $titleResult.passed) { throw 'Codex title assertions failed.' }
+} finally {
+    $env:AI_PET_DATA_DIR = $priorTitleData
+    $env:CODEX_HOME = $priorTitleHome
+    $env:AI_PET_EVENT_DIR = $priorTitleEvents
+}
+
 
 $bitmap = New-Object System.Drawing.Bitmap($referencePath)
 $imageStream = New-Object System.IO.MemoryStream

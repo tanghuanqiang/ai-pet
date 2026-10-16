@@ -140,6 +140,7 @@ namespace AIPet.Desktop
             {
                 if (args[0] == "--ai-codex-hook" && args.Length == 1) RecordSimpleCodexHook();
                 else if (args[0] == "--ai-test-appearance" && args.Length == 2) TestModernAppearance(Path.GetFullPath(args[1]));
+                else if (args[0] == "--ai-test-session-titles" && args.Length == 2) TestCodexSessionTitles(Path.GetFullPath(args[1]));
                 else if (args[0] == "--ai-test-live-desktop" && args.Length == 4)
                     ObserveLiveDesktopForTest(args[1], Int32.Parse(args[2], CultureInfo.InvariantCulture), Path.GetFullPath(args[3]));
                 else if (args[0] == "--ai-test-generation-review" && args.Length == 3) TestGenerationReview(args[1], Path.GetFullPath(args[2]));
@@ -628,7 +629,7 @@ namespace AIPet.Desktop
         {
             if (connectedAiTool == null) return "尚未连接\n选择 Codex 会话，或连接自己的 Agent。";
             string title = connectedAiTool == "codex" ? "已连接 Codex" : "已连接 " + connectedAiTool;
-            if (connectedAiTool == "codex" && selectedDesktopRolloutPath != null) title += " · 已选定本机会话";
+            if (connectedAiTool == "codex") title += "\n会话：" + (CodexTitleForHash(connectedAiSession) ?? "未命名会话");
             int state = Array.IndexOf(AiStates, lastAiState);
             string detail = state < 0 ? "等待这个会话的新任务状态…" : AiStateLabels[state];
             if (lastAiOutcome == "hidden") detail += " · 桌宠已隐藏";
@@ -659,8 +660,18 @@ namespace AIPet.Desktop
                     SaveAiConnection(null, null); menu.PerformClick();
                     string session = selectedCodexSession;
                     if (session != null) SaveAiConnection("codex", session);
-                    status.Text = session == null ? "已断开" : "已连接 Codex 会话";
+                    status.Text = FriendlyConnectionStatus();
                 });
+                CodexSessionDisplay display = menu.Tag as CodexSessionDisplay;
+                if (display != null) {
+                    StackPanel label = new StackPanel();
+                    label.Children.Add(new TextBlock { Text = display.Title, TextWrapping = TextWrapping.Wrap, MaxWidth = 370 });
+                    TextBlock context = new TextBlock { Text = display.Context, FontSize = 12, Margin = new Thickness(0, 4, 0, 0) };
+                    context.SetResourceReference(TextBlock.ForegroundProperty, "PetMuted"); label.Children.Add(context);
+                    button.Content = label; button.ToolTip = menu.ToolTipText;
+                    button.HorizontalContentAlignment = HorizontalAlignment.Left;
+                    button.HorizontalAlignment = HorizontalAlignment.Stretch;
+                }
                 button.IsEnabled = menu.Enabled; panel.Children.Add(button);
             }
         }

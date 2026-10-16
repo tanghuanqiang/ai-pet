@@ -46,6 +46,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\ai-pet.ps1 -Action s
 
 让当前 Codex Agent 执行下面的命令即可绑定它的真实会话（默认读取 `CODEX_THREAD_ID`）；也可以通过 `-Session` 明确指定。桌面界面的“连接 Codex：选择任务”提供本机会话选择。
 
+选择列表和已连接提示优先显示聊天标题，附上项目与时间以区分重名会话。本机 `session_index.jsonl` 标题改名会自动刷新；缺少标题时显示“未命名会话”，不扫描聊天正文猜测名称。标题仅用于界面展示，内部仍按原会话标识准确绑定。
+
 ```powershell
 .\tools\ai-pet.ps1 -Action codex-connect
 .\tools\ai-pet.ps1 -Action status

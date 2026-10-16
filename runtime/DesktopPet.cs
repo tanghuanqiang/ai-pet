@@ -1789,9 +1789,10 @@ namespace AIPet.Desktop
                 string session = ReadString(record, "session");
                 if (!String.Equals(candidates[i].Name, session + ".json", StringComparison.Ordinal)) continue;
                 if (ReadString(record, "event") == "SessionEnd") continue;
+                if (ReadString(record, "event").StartsWith("Desktop", StringComparison.Ordinal)) continue;
                 long age = CurrentUnixMilliseconds() - Convert.ToInt64(record["observedAtMs"], CultureInfo.InvariantCulture);
                 if (age > 60L * 60 * 1000) continue;
-                string label = "最近事件 " + ReadString(record, "event") + " · 会话 " + session.Substring(0, 8);
+                string label = (CodexTitleForHash(session) ?? "未命名会话") + " · 最近状态";
                 Forms.ToolStripMenuItem option = new Forms.ToolStripMenuItem(label);
                 option.Checked = selectedDesktopRolloutPath == null &&
                     String.Equals(selectedCodexSession, session, StringComparison.Ordinal);
@@ -1810,7 +1811,6 @@ namespace AIPet.Desktop
                 codexSessionItem.DropDownItems.Add(option);
                 shown++;
             }
-            if (shown == 0) codexSessionItem.DropDownItems.Add(new Forms.ToolStripMenuItem("暂无最近的本项目 Hook 事件") { Enabled = false });
         }
 
         private static string CodexSessionsRoot()
@@ -1973,8 +1973,11 @@ namespace AIPet.Desktop
                 string selectedPath = files[i].FullName;
                 string session = DesktopSessionHash(id);
                 string hookSession = Sha256Text(id);
-                string label = Path.GetFileName(cwd) + " · 会话 " + session.Substring(0, 8);
+                CodexSessionDisplay display = DescribeCodexSession(id, cwd, files[i].LastWriteTimeUtc);
+                string label = display.Title + " · " + display.Context;
                 Forms.ToolStripMenuItem option = new Forms.ToolStripMenuItem(label);
+                option.Tag = display;
+                option.ToolTipText = label;
                 option.Checked = String.Equals(selectedDesktopRolloutPath, selectedPath, StringComparison.OrdinalIgnoreCase);
                 option.Click += delegate
                 {
