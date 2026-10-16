@@ -8,7 +8,7 @@
 | `paused` | The tool explicitly paused or interrupted execution. |
 | `needs-user` | The tool explicitly requests a reply, confirmation, or permission. |
 
-Emit with `AIPetDesktop.exe --ai-event TOOL SESSION STATE` or the PowerShell wrapper. Call `--ai-connect TOOL SESSION` first. Configure slots with `--ai-bind STATE SLOT`; read `--ai-status ABSOLUTE_OUTPUT_JSON` for available slots and connection. Disconnect with `--ai-disconnect`.
+Emit with `AIPetDesktop.exe --ai-event TOOL SESSION STATE` or the PowerShell wrapper. Call `--ai-connect TOOL SESSION` first. Configure slots with `--ai-bind STATE SLOT`; read `--ai-status ABSOLUTE_OUTPUT_JSON` for available slots and connection. Disconnect with `--ai-disconnect`. For automatic local Codex following use `--ai-codex-auto`; explicit connect/disconnect selects manual/off mode. Slot binding edits preserve the chosen follow mode. The added `codexFollow` status field reports active observed fingerprints/states and ownership, never task bodies or titles.
 
 The receiver accepts only matching tool/session IDs, unique event IDs and fresh timestamps (10 seconds). Each event is bounded local JSON under the configured data directory. Hidden pets and quiet hours suppress playback. An unavailable mapped action is reported as unavailable rather than replaced with another motion. Already-delivered events are not replayed merely because the pet becomes visible.
 

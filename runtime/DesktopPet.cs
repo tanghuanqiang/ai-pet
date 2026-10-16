@@ -1821,7 +1821,7 @@ namespace AIPet.Desktop
             return Path.Combine(Path.GetFullPath(home), "sessions");
         }
 
-        private static bool TryReadDesktopSession(string path, string sessionsRoot, out string id, out string cwd)
+        private static bool TryReadDesktopSession(string path, string sessionsRoot, out string id, out string cwd, bool mainOnly = false)
         {
             id = null;
             cwd = null;
@@ -1850,6 +1850,8 @@ namespace AIPet.Desktop
             Dictionary<string, object> payload = record != null && record.ContainsKey("payload")
                 ? record["payload"] as Dictionary<string, object> : null;
             if (ReadString(record, "type") != "session_meta" || ReadString(payload, "originator") != "Codex Desktop") return false;
+            Dictionary<string, object> source = payload.ContainsKey("source") ? payload["source"] as Dictionary<string, object> : null;
+            if (mainOnly && ((source != null && source.ContainsKey("subagent")) || !String.IsNullOrEmpty(ReadString(payload, "agent_role")))) return false;
             string candidateId = ReadString(payload, "id");
             string candidateCwd = ReadString(payload, "cwd");
             if (!Regex.IsMatch(candidateId, "^[a-f0-9-]{36}$") || !Path.IsPathRooted(candidateCwd)) return false;
@@ -2004,6 +2006,7 @@ namespace AIPet.Desktop
 
         private static void WriteDesktopLifecycleEvent(string eventName, string evidence)
         {
+            if (automaticCodexObserver != null) { automaticCodexObserver(eventName, evidence); return; }
             if (selectedCodexSession == null) return;
             long observedAt = Math.Max(CurrentUnixMilliseconds(), lastDesktopObservedAtMs + 1);
             lastDesktopObservedAtMs = observedAt;
@@ -2279,11 +2282,11 @@ namespace AIPet.Desktop
             codexEventTimer.Tick += delegate {
                 PollAiConnection();
                 string pollStatus = "ok";
-                try { if (connectedAiTool == null) PollSelectedDesktopRollout(); }
+                try { if (connectedAiTool == null && codexFollowMode != "auto") PollSelectedDesktopRollout(); }
                 catch (IOException) { pollStatus = "retry-io"; }
                 catch (UnauthorizedAccessException) { pollStatus = "retry-access"; }
                 catch (Exception) { pollStatus = "retry-invalid-record"; }
-                try { if (connectedAiTool == null) ConsumeSelectedCodexEvent(); }
+                try { if (connectedAiTool == null && codexFollowMode != "auto") ConsumeSelectedCodexEvent(); }
                 catch (IOException) { pollStatus = "retry-event-io"; }
                 catch (UnauthorizedAccessException) { pollStatus = "retry-event-access"; }
                 catch (Exception) { pollStatus = "retry-event-invalid-record"; }

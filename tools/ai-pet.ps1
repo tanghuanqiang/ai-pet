@@ -1,5 +1,5 @@
 ﻿param(
-    [ValidateSet('start','status','connect','disconnect','event','bind','build','requests','result','codex-connect','codex-event','codex-install','codex-remove','codex-status','configure-generation','generate','cancel-generation','generation-status','create')][string]$Action = 'status',
+    [ValidateSet('start','status','connect','disconnect','event','bind','build','requests','result','codex-connect','codex-auto','codex-event','codex-install','codex-remove','codex-status','configure-generation','generate','cancel-generation','generation-status','create')][string]$Action = 'status',
     [string]$Tool, [string]$Session, [string]$State, [string]$Slot,
     [string]$Executable, [string]$DataDirectory, [string]$RequestId, [string]$Theme, [string]$CodexHome, [string]$GeneratorConfig, [string]$CreationSpec
 )
@@ -36,6 +36,7 @@ try {
     }
     $arguments = @()
     if ($Action -eq 'connect') { $arguments = @('--ai-connect', $Tool, $Session) }
+    elseif ($Action -eq 'codex-auto') { $arguments = @('--ai-codex-auto') }
     elseif ($Action -eq 'codex-connect') {
         if (-not $Session) { $Session = $env:CODEX_THREAD_ID }
         if (-not $Session) { throw '请提供真实 Codex 会话编号，或从当前 Codex Agent 中执行。' }

@@ -59,7 +59,7 @@ $runningPreview = Get-Process -Name 'AIPetDesktop' -ErrorAction SilentlyContinue
 if ($runningPreview) {
     throw 'Close the running desktop preview from its tray menu before rebuilding.'
 }
-$arguments = @('/nologo', '/target:winexe', "/out:$exePath", ('/win32manifest:' + (Join-Path $runtimeRoot 'app.manifest'))) + ($references | ForEach-Object { "/reference:$_" }) + @($sourcePath, (Join-Path $runtimeRoot 'PetExperience.cs'), (Join-Path $runtimeRoot 'PetCodex.cs'), (Join-Path $runtimeRoot 'PetGeneration.cs'), (Join-Path $runtimeRoot 'PetDisplay.cs'), (Join-Path $runtimeRoot 'PetAppearance.cs'), (Join-Path $runtimeRoot 'PetCodexTitles.cs'))
+$arguments = @('/nologo', '/target:winexe', "/out:$exePath", ('/win32manifest:' + (Join-Path $runtimeRoot 'app.manifest'))) + ($references | ForEach-Object { "/reference:$_" }) + @($sourcePath, (Join-Path $runtimeRoot 'PetExperience.cs'), (Join-Path $runtimeRoot 'PetCodex.cs'), (Join-Path $runtimeRoot 'PetGeneration.cs'), (Join-Path $runtimeRoot 'PetDisplay.cs'), (Join-Path $runtimeRoot 'PetAppearance.cs'), (Join-Path $runtimeRoot 'PetCodexTitles.cs'), (Join-Path $runtimeRoot 'PetCodexFollow.cs'))
 & $compiler @arguments
 if ($LASTEXITCODE -ne 0) { throw "C# compilation failed with exit code $LASTEXITCODE" }
 Copy-Item -LiteralPath (Join-Path $runtimeRoot 'AIPetDesktop.exe.config') -Destination ($exePath + '.config') -Force
@@ -143,6 +143,25 @@ try {
     $env:AI_PET_EVENT_DIR = $priorTitleEvents
 }
 
+
+$autoData = Join-Path $smokeDataRoot 'auto-data'
+$priorAutoData = $env:AI_PET_DATA_DIR
+$priorAutoHome = $env:CODEX_HOME
+$priorAutoEvents = $env:AI_PET_EVENT_DIR
+try {
+    $env:AI_PET_DATA_DIR = $autoData
+    $env:CODEX_HOME = Join-Path $autoData 'codex'
+    $env:AI_PET_EVENT_DIR = Join-Path $autoData 'codex-events'
+    $autoRoot = Join-Path $smokeDataRoot 'codex-auto'
+    $autoProcess = Start-Process -FilePath $exePath -ArgumentList @('--ai-test-codex-auto', $autoRoot) -PassThru -Wait -WindowStyle Hidden
+    if ($autoProcess.ExitCode -ne 0) { throw 'Automatic Codex checks failed.' }
+    $autoResult = Get-Content -LiteralPath (Join-Path $autoRoot 'result.json') -Raw | ConvertFrom-Json
+    if (-not $autoResult.passed) { throw 'Automatic Codex assertions failed.' }
+} finally {
+    $env:AI_PET_DATA_DIR = $priorAutoData
+    $env:CODEX_HOME = $priorAutoHome
+    $env:AI_PET_EVENT_DIR = $priorAutoEvents
+}
 
 $bitmap = New-Object System.Drawing.Bitmap($referencePath)
 $imageStream = New-Object System.IO.MemoryStream

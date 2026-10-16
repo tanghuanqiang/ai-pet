@@ -43,7 +43,7 @@ Select a slot from the `actions` returned by `status` and map it:
 .\tools\ai-pet.ps1 -Action disconnect
 ```
 
-For Codex, read [the Codex adapter instructions](references/codex.md) and use `-Action codex-connect` in the real current session. The native panel also offers local session selection. Both use the same five-state bindings. Other tool connections take precedence over Codex playback.
+For Codex, read [the Codex adapter instructions](references/codex.md). Use `-Action codex-auto` when the user wants automatic following across locally observed active desktop chats; use `-Action codex-connect` to pin the real current session. Manual selection fixes that chat and disables automatic switching. Both use the same five-state bindings. Connecting a different tool takes precedence until the user enables Codex automatic following again.
 
 ## Customize
 

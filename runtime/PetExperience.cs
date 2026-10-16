@@ -38,6 +38,7 @@ namespace AIPet.Desktop
         private static void InitializeSimpleExperience(string root)
         {
             experienceRoot = root;
+            InitializeCodexFollow(root);
             aiConfigurationPath = Path.Combine(root, "ai-connection.json");
             aiEventsPath = Path.Combine(root, "ai-events");
             for (int i = 0; i < AiStates.Length; i++) aiBindings[AiStates[i]] = DefaultAiSlots[i];
@@ -50,10 +51,12 @@ namespace AIPet.Desktop
             return value != null && Regex.IsMatch(value, @"\A[a-zA-Z0-9][a-zA-Z0-9._-]{0,95}\z");
         }
 
-        private static void SaveAiConnection(string tool, string session)
+        private static void SaveAiConnection(string tool, string session, bool keepFollowMode = false)
         {
             if (tool != null && (!ValidAiId(tool) || !ValidAiId(session)))
                 throw new InvalidDataException("工具和会话标识只允许字母、数字、点、下划线与连字符（最多96字符）。");
+            if (!keepFollowMode) SetCodexFollowMode(tool == null ? "off" : "manual");
+            else if (!File.Exists(codexFollowPath)) SetCodexFollowMode(codexFollowMode);
             Dictionary<string, object> config = new Dictionary<string, object>();
             config["version"] = 1;
             config["tool"] = tool;
@@ -116,6 +119,7 @@ namespace AIPet.Desktop
             return new { version = 1, states = AiStates, tool = connectedAiTool, session = connectedAiSession,
                 generationProtocolVersion = 1, generator = generator, defaultCreationMode = generator == null ? "agent-handoff" : "configured-generator",
                 codexDesktop = new { displayedInputRequests = true, permissionPrompts = false, proseQuestions = false, agentReportedStates = true },
+                codexFollow = AutomaticCodexStatus(),
                 bindings = aiBindings, actions = actions, lastState = lastAiState, lastOutcome = lastAiOutcome,
                 activeSlot = activeThemeAction == null ? null : activeThemeAction.Slot,
                 dataDirectory = experienceRoot, runtimeRunning = window != null && !exiting, checkedAtMs = CurrentUnixMilliseconds(),
@@ -141,6 +145,8 @@ namespace AIPet.Desktop
                 if (args[0] == "--ai-codex-hook" && args.Length == 1) RecordSimpleCodexHook();
                 else if (args[0] == "--ai-test-appearance" && args.Length == 2) TestModernAppearance(Path.GetFullPath(args[1]));
                 else if (args[0] == "--ai-test-session-titles" && args.Length == 2) TestCodexSessionTitles(Path.GetFullPath(args[1]));
+                else if (args[0] == "--ai-test-codex-auto" && args.Length == 2) TestAutomaticCodex(Path.GetFullPath(args[1]));
+                else if (args[0] == "--ai-codex-auto" && args.Length == 1) SetCodexFollowMode("auto");
                 else if (args[0] == "--ai-test-live-desktop" && args.Length == 4)
                     ObserveLiveDesktopForTest(args[1], Int32.Parse(args[2], CultureInfo.InvariantCulture), Path.GetFullPath(args[3]));
                 else if (args[0] == "--ai-test-generation-review" && args.Length == 3) TestGenerationReview(args[1], Path.GetFullPath(args[2]));
@@ -174,7 +180,7 @@ namespace AIPet.Desktop
                 {
                     if (Array.IndexOf(AiStates, args[1]) < 0 || Array.IndexOf(SupportedThemeSlots, args[2]) < 0)
                         throw new InvalidDataException("未知状态或动作。");
-                    aiBindings[args[1]] = args[2]; SaveAiConnection(connectedAiTool, connectedAiSession);
+                    aiBindings[args[1]] = args[2]; SaveAiConnection(connectedAiTool, connectedAiSession, true);
                 }
                 else if (args[0] == "--ai-event" && args.Length == 4)
                 {
@@ -272,9 +278,12 @@ namespace AIPet.Desktop
             long timestamp = Convert.ToInt64(record["observedAtMs"], CultureInfo.InvariantCulture);
             long now = CurrentUnixMilliseconds();
             if (timestamp < aiConnectedAt || timestamp > now + 1000 || now - timestamp > 10000 || !seenAiEvents.Add(id)) return false;
+            if (codexFollowMode == "auto" && !applyingAutomaticCodex)
+                foreach (CodexWatch watch in codexWatches.Values) if (watch.Hash == connectedAiSession && timestamp < watch.SignalAt) return false;
             seenAiEventOrder.Enqueue(id);
             if (seenAiEventOrder.Count > 512) seenAiEvents.Remove(seenAiEventOrder.Dequeue());
             lastAiState = state;
+            ObserveAutomaticAgentState(state, timestamp);
             string slot = aiBindings[state];
             if (window == null || !window.IsVisible) lastAiOutcome = "hidden";
             else if (IsWithinQuietHours(preferences, DateTime.Now.TimeOfDay)) lastAiOutcome = "quiet-hours";
@@ -290,15 +299,19 @@ namespace AIPet.Desktop
         {
             try
             {
+                ReloadCodexFollow();
                 ReloadAiConnection();
+                PollAutomaticCodex(CurrentUnixMilliseconds());
                 if (connectedAiTool == null) {
+                    UpdateCodexFollowTooltip();
                     Directory.CreateDirectory(experienceRoot);
                     WriteCodexEventAtomically(Path.Combine(experienceRoot, "ai-status.json"), new JavaScriptSerializer().Serialize(AiCapabilities()));
                     return;
                 }
-                if (connectedAiTool == "codex" && selectedCodexSession == connectedAiSession) {
+                if (codexFollowMode != "auto" && connectedAiTool == "codex" && selectedCodexSession == connectedAiSession) {
                     PollSelectedDesktopRollout(); ConsumeSelectedCodexEvent();
                 }
+                else if (codexFollowMode == "auto" && connectedAiTool == "codex" && selectedCodexSession == connectedAiSession) ConsumeSelectedCodexEvent();
                 if (lastAiState != null && window != null && (!window.IsVisible || IsWithinQuietHours(preferences, DateTime.Now.TimeOfDay))) {
                     lastAiOutcome = window.IsVisible ? "quiet-hours" : "hidden";
                     ResetConnectedPlayback();
@@ -310,6 +323,7 @@ namespace AIPet.Desktop
                     try { ApplyAiEvent(new JavaScriptSerializer().DeserializeObject(ReadBoundedJson(file)) as Dictionary<string, object>); }
                     catch (Exception) { }
                 }
+                UpdateCodexFollowTooltip();
                 Directory.CreateDirectory(experienceRoot);
                 WriteCodexEventAtomically(Path.Combine(experienceRoot, "ai-status.json"), new JavaScriptSerializer().Serialize(AiCapabilities()));
             }
@@ -536,14 +550,22 @@ namespace AIPet.Desktop
             custom.Children.Add(actionButtons);
             AddManagerTab("自定义", custom);
 
-            StackPanel connection = ManagerPage("连接 AI 工具", "选好会话，宠物就会跟着任务动起来。");
+            StackPanel connection = ManagerPage("连接 AI 工具", "自动跟随任务，也可以固定一段会话。");
+            CheckBox automaticFollow = new CheckBox { Content = "自动跟随正在运行的 Codex 会话", IsChecked = codexFollowMode == "auto", Margin = new Thickness(0, 0, 0, 16) };
+            bool syncingFollow = false;
+            automaticFollow.Checked += delegate { if (!syncingFollow) SetCodexFollowMode("auto"); };
+            automaticFollow.Unchecked += delegate { if (!syncingFollow) SetCodexFollowMode(connectedAiTool == null ? "off" : "manual"); };
+            connection.Children.Add(automaticFollow);
             TextBlock connectionStatus = ManagerText("", false);
             connectionStatus.Margin = new Thickness(0);
             Border connectionCard = new Border { CornerRadius = new CornerRadius(8), Padding = new Thickness(16), Margin = new Thickness(0, 0, 0, 20), Child = connectionStatus };
             connectionCard.SetResourceReference(Border.BackgroundProperty, "PetSelected");
             connection.Children.Add(connectionCard);
             System.Windows.Threading.DispatcherTimer connectionRefresh = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            Action refreshConnection = delegate { connectionStatus.Text = FriendlyConnectionStatus(); };
+            Action refreshConnection = delegate {
+                syncingFollow = true; automaticFollow.IsChecked = codexFollowMode == "auto"; syncingFollow = false;
+                connectionStatus.Text = FriendlyConnectionStatus();
+            };
             connectionRefresh.Tick += delegate { refreshConnection(); }; refreshConnection(); connectionRefresh.Start();
             petManager.Closed += delegate { connectionRefresh.Stop(); };
             Expander agentSetup = new Expander { Header = "其他工具：让 Agent 连接，或手动填写", Margin = new Thickness(0, 0, 0, 12) };
@@ -559,7 +581,7 @@ namespace AIPet.Desktop
             }));
             agentSetup.Content = agentFields;
             Expander codexSetup = new Expander { Header = "可连接的本机会话", Visibility = Visibility.Collapsed, Margin = new Thickness(0, 0, 0, 12) };
-            connection.Children.Add(ManagerButton("连接 Codex：选择任务", delegate {
+            connection.Children.Add(ManagerButton("手动固定一个 Codex 会话…", delegate {
                 PopulateCodexSessionMenu();
                 StackPanel sessions = new StackPanel();
                 AddCodexConnectionButtons(sessions, codexSessionItem.DropDownItems, connectionStatus);
@@ -588,12 +610,12 @@ namespace AIPet.Desktop
                 }
                 choice.SelectionChanged += delegate {
                     ComboBoxItem selected = choice.SelectedItem as ComboBoxItem;
-                    if (selected != null) { aiBindings[state] = (string)selected.Tag; SaveAiConnection(connectedAiTool, connectedAiSession); }
+                    if (selected != null) { aiBindings[state] = (string)selected.Tag; SaveAiConnection(connectedAiTool, connectedAiSession, true); }
                 };
                 row.Children.Add(choice); connection.Children.Add(row);
             }
             connection.Children.Add(agentSetup);
-            connection.Children.Add(new Expander { Header = "连接说明", Margin = new Thickness(0, 0, 0, 12), Content = ManagerText("每次跟随一个 Codex 会话；切换会话时，请重新选择。可观察开始、工具活动、结束和中断；已显示的输入请求可触发提醒，普通文字追问需要 Agent 主动报告。连接状态不会自动发送制作请求。", false) });
+            connection.Children.Add(new Expander { Header = "连接说明", Margin = new Thickness(0, 0, 0, 12), Content = ManagerText("自动模式跟随最近开始的任务，普通工具活动不会反复切换；当前任务结束后继续其他任务，需要回答的会话优先。手动选择会固定会话。五分钟没有新信号会标为待确认，长时间思考可能暂时无法确认；普通文字追问仍需 Agent 上报。连接不会自动发送制作请求。", false) });
             connection.Children.Add(ManagerText("连接其他工具需要对应适配器发送状态。任务结束不代表成功；工具未提供的状态不自动猜测。", false));
             AddManagerTab("连接 AI 工具", connection);
 
@@ -627,14 +649,17 @@ namespace AIPet.Desktop
 
         private static string FriendlyConnectionStatus()
         {
-            if (connectedAiTool == null) return "尚未连接\n选择 Codex 会话，或连接自己的 Agent。";
+            if (connectedAiTool == null) return codexFollowMode == "auto" ? AutomaticCodexSummary() + "\n任务开始后会自动关联。" : "尚未连接\n选择 Codex 会话，或连接自己的 Agent。";
             string title = connectedAiTool == "codex" ? "已连接 Codex" : "已连接 " + connectedAiTool;
             if (connectedAiTool == "codex") title += "\n会话：" + (CodexTitleForHash(connectedAiSession) ?? "未命名会话");
+            if (codexFollowMode == "auto") title = AutomaticCodexSummary();
+            else if (connectedAiTool == "codex") title = "固定会话 · " + title;
             int state = Array.IndexOf(AiStates, lastAiState);
             string detail = state < 0 ? "等待这个会话的新任务状态…" : AiStateLabels[state];
             if (lastAiOutcome == "hidden") detail += " · 桌宠已隐藏";
             else if (lastAiOutcome == "quiet-hours") detail += " · 安静时段，暂停播放";
             else if (lastAiOutcome == "action-unavailable") detail += " · 请为此状态选择可用动作";
+            else if (lastAiOutcome == "signal-stale") detail = "没有新的明确信号；宠物暂时休息。";
             else if (lastAiOutcome == "played" && activeThemeAction != null) detail += " · 动作：" + SimpleActionLabel(activeThemeAction.Slot);
             if (connectedAiTool == "codex" && lastCodexActionAtMs > 0) {
                 long seconds = Math.Max(0, (CurrentUnixMilliseconds() - lastCodexActionAtMs) / 1000);

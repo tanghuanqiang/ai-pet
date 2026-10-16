@@ -9,7 +9,7 @@ namespace AIPet.Desktop
 {
     internal static partial class DesktopPet
     {
-        private static readonly Dictionary<string, string> pendingDesktopInputCalls = new Dictionary<string, string>();
+        private static Dictionary<string, string> pendingDesktopInputCalls = new Dictionary<string, string>();
 
         private static void ObserveLiveDesktopForTest(string id, int seconds, string output)
         {
