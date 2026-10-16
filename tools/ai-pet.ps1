@@ -1,5 +1,5 @@
 ﻿param(
-    [ValidateSet('start','status','connect','disconnect','event','bind','build','requests','result','codex-connect','codex-install','codex-remove','codex-status','configure-generation','generate','cancel-generation','generation-status','create')][string]$Action = 'status',
+    [ValidateSet('start','status','connect','disconnect','event','bind','build','requests','result','codex-connect','codex-event','codex-install','codex-remove','codex-status','configure-generation','generate','cancel-generation','generation-status','create')][string]$Action = 'status',
     [string]$Tool, [string]$Session, [string]$State, [string]$Slot,
     [string]$Executable, [string]$DataDirectory, [string]$RequestId, [string]$Theme, [string]$CodexHome, [string]$GeneratorConfig, [string]$CreationSpec
 )
@@ -42,6 +42,11 @@ try {
         $arguments = @('--ai-codex-connect', $Session)
     }
     elseif ($Action -eq 'disconnect') { $arguments = @('--ai-disconnect') }
+    elseif ($Action -eq 'codex-event') {
+        if (-not $Session) { $Session = $env:CODEX_THREAD_ID }
+        if (-not $Session) { throw '请提供真实 Codex 会话编号，或从当前 Codex Agent 中执行。' }
+        $arguments = @('--ai-codex-event', $Session, $State)
+    }
     elseif ($Action -eq 'event') { $arguments = @('--ai-event', $Tool, $Session, $State) }
     elseif ($Action -eq 'bind') { $arguments = @('--ai-bind', $State, $Slot) }
     elseif ($Action -eq 'configure-generation') {
@@ -86,6 +91,6 @@ try {
     elseif ($Action -eq 'generate') { Write-Output '已启动生成；用 generation-status 查询进度。' }
     elseif ($Action -eq 'cancel-generation') { Write-Output '已请求取消当前生成。' }
     elseif ($Action -eq 'configure-generation') { Write-Output '生成器已配置。' }
-    elseif ($Action -eq 'event') { Write-Output '已发送；仅由匹配工具和会话的运行中桌宠接收。' }
+    elseif ($Action -in @('event','codex-event')) { Write-Output 'Agent 状态已发送；仅由匹配工具和会话的运行中桌宠接收。' }
     else { Write-Output '配置已保存。' }
 } finally { $env:AI_PET_DATA_DIR = $previousDataDirectory }

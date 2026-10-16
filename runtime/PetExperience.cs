@@ -115,7 +115,7 @@ namespace AIPet.Desktop
             } catch (Exception) { }
             return new { version = 1, states = AiStates, tool = connectedAiTool, session = connectedAiSession,
                 generationProtocolVersion = 1, generator = generator, defaultCreationMode = generator == null ? "agent-handoff" : "configured-generator",
-                codexDesktop = new { displayedInputRequests = true, permissionPrompts = false, proseQuestions = false },
+                codexDesktop = new { displayedInputRequests = true, permissionPrompts = false, proseQuestions = false, agentReportedStates = true },
                 bindings = aiBindings, actions = actions, lastState = lastAiState, lastOutcome = lastAiOutcome,
                 activeSlot = activeThemeAction == null ? null : activeThemeAction.Slot,
                 dataDirectory = experienceRoot, runtimeRunning = window != null && !exiting, checkedAtMs = CurrentUnixMilliseconds(),
@@ -144,6 +144,10 @@ namespace AIPet.Desktop
                 else if (args[0] == "--ai-test-generation-review" && args.Length == 3) TestGenerationReview(args[1], Path.GetFullPath(args[2]));
                 else if (args[0] == "--ai-test-generate-click" && args.Length == 3) TestGenerateClick(Path.GetFullPath(args[1]), Path.GetFullPath(args[2]));
                 else if (args[0] == "--ai-codex-connect" && args.Length == 2) ConnectSimpleCodex(args[1]);
+                else if (args[0] == "--ai-codex-event" && args.Length == 3) {
+                    if (!ValidAiId(args[1])) throw new InvalidDataException("Invalid Codex session.");
+                    RecordAiStateEvent("codex", DesktopSessionHash(args[1]), args[2]);
+                }
                 else if (args[0] == "--ai-create-request" && args.Length == 3) {
                     Dictionary<string, object> spec = new JavaScriptSerializer().DeserializeObject(ReadBoundedJson(Path.GetFullPath(args[1]))) as Dictionary<string, object>;
                     List<string> photos = new List<string>();
@@ -172,15 +176,7 @@ namespace AIPet.Desktop
                 }
                 else if (args[0] == "--ai-event" && args.Length == 4)
                 {
-                    if (!ValidAiId(args[1]) || !ValidAiId(args[2]) || Array.IndexOf(AiStates, args[3]) < 0)
-                        throw new InvalidDataException("事件需要工具、会话和五个合法状态之一。");
-                    Directory.CreateDirectory(aiEventsPath);
-                    string id = Guid.NewGuid().ToString("N");
-                    object record = new { version = 1, eventId = id, observedAtMs = CurrentUnixMilliseconds(),
-                        tool = args[1], session = args[2], state = args[3] };
-                    WriteCodexEventAtomically(Path.Combine(aiEventsPath, CurrentUnixMilliseconds().ToString("D13") + "." + id + ".json"),
-                        new JavaScriptSerializer().Serialize(record));
-                    PruneAiEvents();
+                    RecordAiStateEvent(args[1], args[2], args[3]);
                 }
                 else if (args[0] == "--ai-status" && args.Length == 2)
                 {
@@ -238,6 +234,19 @@ namespace AIPet.Desktop
                 Environment.ExitCode = 2;
             }
             return true;
+        }
+
+        private static void RecordAiStateEvent(string tool, string session, string state)
+        {
+            if (!ValidAiId(tool) || !ValidAiId(session) || Array.IndexOf(AiStates, state) < 0)
+                throw new InvalidDataException("事件需要工具、会话和五个合法状态之一。");
+            Directory.CreateDirectory(aiEventsPath);
+            string id = Guid.NewGuid().ToString("N");
+            object record = new { version = 1, eventId = id, observedAtMs = CurrentUnixMilliseconds(),
+                tool = tool, session = session, state = state };
+            WriteCodexEventAtomically(Path.Combine(aiEventsPath, CurrentUnixMilliseconds().ToString("D13") + "." + id + ".json"),
+                new JavaScriptSerializer().Serialize(record));
+            PruneAiEvents();
         }
 
         private static void PruneAiEvents()
@@ -394,6 +403,7 @@ namespace AIPet.Desktop
             petManager = new Window { Title = "AI Pet · 你的桌面伙伴", Width = 700, Height = 640,
                 MinWidth = 560, MinHeight = 480, WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 Background = new SolidColorBrush(Color.FromRgb(250, 248, 244)), FontFamily = new FontFamily("Microsoft YaHei UI") };
+            AttachDisplayRecovery(petManager);
             petManager.Closed += delegate { petManager = null; petManagerTabs = null; };
             petManagerTabs = new TabControl { Margin = new Thickness(12), FontSize = 14 };
             string savedCreationPrompt = creationDraftPrompt ?? "";
@@ -591,9 +601,7 @@ namespace AIPet.Desktop
             {
                 string name = screen.DeviceName;
                 utilities.Children.Add(ManagerButton("移动到显示器 " + name, delegate {
-                    preferredScreenName = name;
-                    Point point = ResolveWindowPosition(ScreenWorkAreaDips(FindScreen(name)), window.Width, window.Height, Double.NaN, Double.NaN);
-                    window.Left = point.X; window.Top = point.Y; ShowWindow(); TrySaveCurrentPlacement();
+                    MovePetToScreen(FindScreen(name));
                 }));
             }
             advanced.Content = utilities; settings.Children.Add(advanced); AddManagerTab("设置", settings);

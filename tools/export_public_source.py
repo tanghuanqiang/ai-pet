@@ -15,10 +15,10 @@ def public_files() -> list[Path]:
     names = {'.gitignore', '.gitattributes', 'LICENSE', 'THIRD-PARTY-NOTICES.md', 'README.md', 'IMPLEMENTATION-PLAN.md',
              'index.html', 'app.js', 'styles.css', 'simple-ui.js', 'simple-ui.css', 'theme-frame-player.js',
              'runtime/DesktopPet.cs', 'runtime/PetExperience.cs', 'runtime/PetCodex.cs', 'runtime/build.ps1', 'runtime/install-public.ps1',
-             'runtime/PetGeneration.cs',
+             'runtime/PetGeneration.cs', 'runtime/PetDisplay.cs', 'runtime/app.manifest', 'runtime/AIPetDesktop.exe.config',
              'tools/generate_pet_comfy.py', 'tools/configure_local_generator.ps1', 'tools/generation_smoke.py', 'tools/birefnet-requirements.txt',
-             'tools/import_sprite_atlas.py', 'tools/import_sprite_atlas_smoke.py',
-             'tools/codex-connection.ps1', 'tools/codex_connection_smoke.py',
+             'tools/import_sprite_atlas.py', 'tools/import_sprite_atlas_smoke.py', 'tools/research_vace_benchmark.py',
+             'tools/codex-connection.ps1', 'tools/codex_connection_smoke.py', 'tools/codex_desktop_probe.ps1',
              'tools/ai-pet.ps1', 'tools/simple_experience_smoke.ps1', 'tools/export_public_source.py',
              'tools/build_creator.py', 'tools/package_public.py', 'tools/creator-requirements.txt', 'tools/matting-requirements.txt'}
     tree = ast.parse((ROOT / 'tools/build_creator.py').read_text(encoding='utf-8-sig'))

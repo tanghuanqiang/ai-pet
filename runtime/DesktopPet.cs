@@ -191,6 +191,10 @@ namespace AIPet.Desktop
         [STAThread]
         private static void Main(string[] args)
         {
+            // Off-screen render/test helpers intentionally use invisible coordinates.
+            // Interactive playback and explicit visible reviews recover their position.
+            displayRecoveryEnabled = args.Length == 0 || args[0] == "--test-display-compatibility" ||
+                Array.IndexOf(args, "--visible-review") >= 0;
             if (args.Length == 1 && args[0] == "--ai-codex-hook") {
                 try {
                     string hookData = Environment.GetEnvironmentVariable("AI_PET_DATA_DIR");
@@ -1359,6 +1363,8 @@ namespace AIPet.Desktop
                 RenderPreview(Path.GetFullPath(args[1]));
                 return;
             }
+            if (args.Length == 2 && args[0] == "--test-display-compatibility")
+            { TestDisplayCompatibility(Path.GetFullPath(args[1]), photoPath); return; }
             if (args.Length >= 2 && args[0] == "--test-window-placement")
             {
                 System.Windows.Rect negativeMonitor = new System.Windows.Rect(-1920, 0, 1920, 1080);
@@ -1457,10 +1463,13 @@ namespace AIPet.Desktop
                 {
                     Forms.Screen targetScreen = Forms.Screen.AllScreens[0];
                     moveScreenItem.DropDownItems[0].PerformClick();
-                    System.Windows.Point targetPosition = ResolveWindowPosition(ScreenWorkAreaDips(targetScreen),
-                        window.Width, window.Height, Double.NaN, Double.NaN);
-                    screenMenuMoveWorks = window.IsVisible && Math.Abs(window.Left - targetPosition.X) < 0.5 &&
-                        Math.Abs(window.Top - targetPosition.Y) < 0.5;
+                    DisplayRect movedBounds;
+                    bool haveBounds = GetWindowRect(new System.Windows.Interop.WindowInteropHelper(window).Handle, out movedBounds);
+                    System.Drawing.Rectangle workArea = targetScreen.WorkingArea;
+                    screenMenuMoveWorks = window.IsVisible && haveBounds &&
+                        movedBounds.Left >= workArea.Left && movedBounds.Top >= workArea.Top &&
+                        movedBounds.Right <= workArea.Right && movedBounds.Bottom <= workArea.Bottom &&
+                        WindowScreenName() == targetScreen.DeviceName;
                 }
                 string result = "{\"visibleAtLaunch\":" + visibleAtLaunch.ToString().ToLowerInvariant()
                     + ",\"hideWorks\":" + hideWorks.ToString().ToLowerInvariant()
@@ -2465,13 +2474,7 @@ namespace AIPet.Desktop
                 item.Checked = target.DeviceName == WindowScreenName();
                 item.Click += delegate
                 {
-                    preferredScreenName = target.DeviceName;
-                    System.Windows.Point position = ResolveWindowPosition(ScreenWorkAreaDips(target),
-                        window.Width, window.Height, Double.NaN, Double.NaN);
-                    window.Left = position.X;
-                    window.Top = position.Y;
-                    ShowWindow();
-                    TrySaveCurrentPlacement();
+                    MovePetToScreen(target);
                 };
                 moveScreenItem.DropDownItems.Add(item);
             }
@@ -2482,6 +2485,8 @@ namespace AIPet.Desktop
         {
             waitingForTransparentTheme = runtimeSpriteOnly && activeTheme == null;
             window = new Window();
+            AttachDisplayRecovery(window);
+            window.ShowActivated = false;
             window.Title = "AI Pet Studio · 桌面预览";
             window.Width = 234;
             window.Height = 366;

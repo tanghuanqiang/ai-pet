@@ -42,3 +42,16 @@ Ordinary text questions are not automatically detected. An asynchronous input pr
 When upgrading an older AI-PET installation, `codex-install` also recognizes that installation's `codex-hook-registration.json`. It migrates only the exact legacy command matching the selected executable, recorded project and Codex directory, including the old `SessionEnd` observer. Unrelated hooks and handlers sharing a group are preserved. The old marker is kept for recovery and `hooks.json` is backed up. Changed hook definitions still require Codex's own review and trust; migration never edits trust records.
 
 Disconnect with `-Action disconnect`. Remove only this adapter's hook groups with `-Action codex-remove`; unrelated hooks remain. Removal is separate from disconnect so the user can reconnect later without registering again.
+## Agent-reported questions
+
+When this actual Codex session is already connected, report an ordinary question immediately before asking the user:
+
+```powershell
+.\tools\ai-pet.ps1 -Action codex-event -State needs-user
+```
+
+The command uses `CODEX_THREAD_ID`, or an explicit `-Session`, and hashes it exactly as `codex-connect` does. It emits only a state event; it does not connect another session, change mappings, ask the question, or grant permission. After the user's reply, report `running` when resuming work. Use `started`, `finished` and `paused` only for states actually known to the Agent. `finished` means this turn ended, not that the whole objective succeeded.
+
+This is explicitly **Agent-reported**, not a reliable host callback. It cannot observe a host approval that happens before the Agent can run the command, or a process crash. Later real tool activity can replace the state. Prefer verified native events when available. Never report a question on behalf of another session.
+
+For read-only transport discovery, `tools/codex_desktop_probe.ps1 -CodexExecutable C:\absolute\codex.exe -Output C:\absolute\new-report.json` records sanitized process/transport metadata and checks the default control connection. It does not start a server or prove that an accessible server owns the existing desktop conversation.

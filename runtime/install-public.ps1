@@ -4,6 +4,10 @@
     [switch]$NoShortcut, [switch]$Start
 )
 $ErrorActionPreference = 'Stop'
+$framework = Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full' -ErrorAction SilentlyContinue
+if (-not $framework -or $framework.Release -lt 528040) {
+    throw '桌宠需要 .NET Framework 4.8 或更新的桌面组件，请安装后重试。现有作品未被修改。'
+}
 $packageRoot = $PSScriptRoot
 $manifest = Get-Content -LiteralPath (Join-Path $packageRoot 'public-package.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $destination = [IO.Path]::GetFullPath($InstallRoot)

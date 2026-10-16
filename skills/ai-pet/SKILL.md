@@ -13,7 +13,7 @@ Locate the user's AI-PET checkout or installed release. For a checkout, the comm
 
 The canonical public repository is https://github.com/tanghuanqiang/ai-pet. If no installation exists, retrieve an actual published Windows release from that repository (preview releases are currently used), or clone its source and build. Resolve download names and URLs from the repository's real release metadata. Run the package's installer, then use the installed command wrapper and retain the installed generation-adapter files if configuring a backend.
 
-On Windows with the .NET Framework desktop components, build the checkout using:
+On Windows with .NET Framework 4.8 or newer desktop components, build the checkout using:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\ai-pet.ps1 -Action build
@@ -60,6 +60,8 @@ Read the selected request JSON and its local reference images, resolving relativ
 After generating transparent frames, create an idle pose plus the requested actions using `tools/theme_package.py pack-multi`. The spec has `name` and `actions`; each action has `slot`, `fps`, `loop`, and a simple local frame `directory`. For example, keep `idle` frames in `idle/` and a custom greeting in `click/`. Slot names are runtime trigger locations; the user's prompt determines the animation content. Add appropriate local user-interaction slots and AI-state slots when requested. Keep all frames on the same canvas and preview the actual animation, not only the first frame.
 
 If the generation tool returns a transparent sprite sheet, use [the atlas import instructions](references/generation.md#sprite-atlas-output) instead of writing a custom crop script. The importer preserves alpha and source pixels and requires visible motion; it cannot fix identity, timing, fringes or missing anatomy. It does not generate animation from a static photo.
+
+Check the requested action at desktop size and inspect the moving region across the complete sequence. Texture noise or tiny redraw differences do not prove a blink, wag or another requested motion. Check identity, anatomy, clean transparent edges, stable placement and the transition back to idle independently. If the tool produces an almost-static or malformed action, report that failure and retry only within the agreed limit; do not submit it to the user's request as a successful action. Keep failed attempts in the local experiment record. A model finishing execution and a package passing format validation are separate from animation quality.
 
 Submit the resulting theme without installing it:
 

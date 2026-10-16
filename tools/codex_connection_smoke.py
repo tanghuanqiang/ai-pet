@@ -70,10 +70,13 @@ def main() -> None:
     runtime = subprocess.Popen([exe], env=env)
     reports = []
     def snapshot():
-        try:
-            return json.loads((data / 'ai-status.json').read_text(encoding='utf-8-sig'))
-        except (FileNotFoundError, PermissionError, json.JSONDecodeError):
-            return {}
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline:
+            try:
+                return json.loads((data / 'ai-status.json').read_text(encoding='utf-8-sig'))
+            except (FileNotFoundError, PermissionError, json.JSONDecodeError):
+                time.sleep(.02)
+        return {}
     def wait_state(state, slot=None):
         deadline = time.monotonic() + 10
         while time.monotonic() < deadline:
@@ -95,6 +98,14 @@ def main() -> None:
                              ('PostToolUse','running'),('PermissionRequest','needs-user'),('Stop','finished'),('Interrupt','paused')]:
             hook(event)
             reports.append(wait_state(state))
+        # Agent semantic reporting is separate from native lifecycle observation.
+        command('codex-event', '-Session', str(uuid.uuid4()), '-State', 'needs-user')
+        time.sleep(.7)
+        assert snapshot().get('lastState') == 'paused', 'foreign Agent report must not change the selected session'
+        command('codex-event', '-Session', sid, '-State', 'needs-user')
+        wait_state('needs-user')
+        command('codex-event', '-Session', sid, '-State', 'running')
+        wait_state('running')
         command('bind', '-State', 'finished', '-Slot', 'click')
         hook('Stop'); wait_state('finished', 'click')
         count = len(list((data / 'ai-events').glob('*.json')))
@@ -172,7 +183,7 @@ def main() -> None:
                   'unrelatedHooksPreserved': True, 'legacyHooksMigrated': True, 'mixedHookGroupPreserved': True,
                   'desktopDisplayedInput': needs_user, 'failedOrUnmatchedQuestionsIgnored': True,
                   'staleOrForeignQuestionsIgnored': True, 'ordinaryTextIgnored': True,
-                  'reinstallIdempotent': True, 'privatePayloadDiscarded': True}
+                  'reinstallIdempotent': True, 'privatePayloadDiscarded': True, 'agentReportedQuestions': True}
         (output / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
         print(json.dumps({'passed': True, 'result': str(output / 'result.json')}))
     finally:

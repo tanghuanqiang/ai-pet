@@ -1,4 +1,4 @@
-param([switch]$CompileOnly, [switch]$Public, [string]$Python = 'python')
+﻿param([switch]$CompileOnly, [switch]$Public, [string]$Python = 'python')
 
 $ErrorActionPreference = 'Stop'
 
@@ -6,9 +6,10 @@ $runtimeRoot = $PSScriptRoot
 $workspaceRoot = Split-Path $runtimeRoot -Parent
 $outputRoot = Join-Path $runtimeRoot 'publish'
 if ($Public) { $outputRoot = Join-Path $runtimeRoot 'public-publish' }
-$compiler = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+$frameworkRoot = Join-Path $env:WINDIR 'Microsoft.NET'
+$compiler = @('Framework64','Framework') | ForEach-Object { Join-Path $frameworkRoot ($_ + '\v4.0.30319\csc.exe') } | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 
-if (-not (Test-Path -LiteralPath $compiler)) {
+if (-not $compiler) {
     throw "The .NET Framework C# compiler was not found: $compiler"
 }
 
@@ -27,8 +28,8 @@ function Find-GacAssembly([string]$name, [string[]]$roots) {
 }
 
 $gacRoots = @(
-    'C:\Windows\Microsoft.NET\assembly\GAC_MSIL',
-    'C:\Windows\Microsoft.NET\assembly\GAC_32'
+    (Join-Path $frameworkRoot 'assembly\GAC_MSIL'),
+    (Join-Path $frameworkRoot 'assembly\GAC_32')
 )
 $references = @(
     (Find-GacAssembly 'WindowsBase' $gacRoots),
@@ -37,9 +38,9 @@ $references = @(
     (Find-GacAssembly 'System.Xaml' $gacRoots),
     (Find-GacAssembly 'System.IO.Compression' $gacRoots),
     (Find-GacAssembly 'System.IO.Compression.FileSystem' $gacRoots),
-    'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Windows.Forms.dll',
-    'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Drawing.dll',
-    'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Web.Extensions.dll'
+    (Join-Path (Split-Path $compiler -Parent) 'System.Windows.Forms.dll'),
+    (Join-Path (Split-Path $compiler -Parent) 'System.Drawing.dll'),
+    (Join-Path (Split-Path $compiler -Parent) 'System.Web.Extensions.dll')
 )
 foreach ($reference in $references) {
     if (-not (Test-Path -LiteralPath $reference)) { throw "Required assembly not found: $reference" }
@@ -58,9 +59,10 @@ $runningPreview = Get-Process -Name 'AIPetDesktop' -ErrorAction SilentlyContinue
 if ($runningPreview) {
     throw 'Close the running desktop preview from its tray menu before rebuilding.'
 }
-$arguments = @('/nologo', '/target:winexe', "/out:$exePath") + ($references | ForEach-Object { "/reference:$_" }) + @($sourcePath, (Join-Path $runtimeRoot 'PetExperience.cs'), (Join-Path $runtimeRoot 'PetCodex.cs'), (Join-Path $runtimeRoot 'PetGeneration.cs'))
+$arguments = @('/nologo', '/target:winexe', "/out:$exePath", ('/win32manifest:' + (Join-Path $runtimeRoot 'app.manifest'))) + ($references | ForEach-Object { "/reference:$_" }) + @($sourcePath, (Join-Path $runtimeRoot 'PetExperience.cs'), (Join-Path $runtimeRoot 'PetCodex.cs'), (Join-Path $runtimeRoot 'PetGeneration.cs'), (Join-Path $runtimeRoot 'PetDisplay.cs'))
 & $compiler @arguments
 if ($LASTEXITCODE -ne 0) { throw "C# compilation failed with exit code $LASTEXITCODE" }
+Copy-Item -LiteralPath (Join-Path $runtimeRoot 'AIPetDesktop.exe.config') -Destination ($exePath + '.config') -Force
 if ($Public) {
     $demo = Start-Process -FilePath $exePath -ArgumentList @('--export-demo-photo', ('"' + (Join-Path $outputRoot 'reference-cat.jpg') + '"')) -WindowStyle Hidden -Wait -PassThru
     if ($demo.ExitCode -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $outputRoot 'reference-cat.jpg'))) { throw 'Public demo image generation failed.' }
@@ -112,6 +114,11 @@ if (-not $placementResult.negativeMonitor -or -not $placementResult.resizePreser
     throw "Window placement geometry reported a failed assertion: $($placementResult | ConvertTo-Json -Compress)"
 }
 Add-Type -AssemblyName System.Drawing
+$displayResultPath = Join-Path $smokeDataRoot 'display-compatibility.json'
+$displayProcess = Start-Process -FilePath $exePath -ArgumentList @('--test-display-compatibility', $displayResultPath) -PassThru -Wait -WindowStyle Hidden
+if ($displayProcess.ExitCode -ne 0) { throw 'Native display compatibility failed.' }
+$displayResult = Get-Content -LiteralPath $displayResultPath -Raw | ConvertFrom-Json
+if (-not $displayResult.perMonitorV2 -or -not $displayResult.offscreenRecovery -or -not $displayResult.syntheticSettingsCallback) { throw 'Native display compatibility assertions failed.' }
 $bitmap = New-Object System.Drawing.Bitmap($referencePath)
 $imageStream = New-Object System.IO.MemoryStream
 $bitmap.Save($imageStream, [System.Drawing.Imaging.ImageFormat]::Png)

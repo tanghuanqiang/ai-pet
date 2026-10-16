@@ -1,0 +1,9 @@
+# Install in a dedicated venv that can see the validated CUDA torch/torchvision.
+# Tested with Python 3.12.11, torch 2.11.0.dev20251227+cu128,
+# torchvision 0.25.0.dev20251227+cu128 on RTX 5070 Ti.
+transformers==5.0.0
+timm==1.0.30
+kornia==0.8.3
+einops==0.8.2
+numpy==1.26.4
+Pillow==12.0.0
