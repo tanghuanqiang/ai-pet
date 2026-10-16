@@ -147,3 +147,5 @@
 连接页改为实时可读状态，显示所连工具、任务状态、当前动作和 Codex 最近事件时间，隐藏内部会话指纹。说明每次跟随一个所选会话，切换会话需重新选择；保留手动 Agent 接口和五种动作映射。本次检查中实际安装持续收到当前 Codex 会话的工具活动，联动结果为 `played`，未发现连接中断；不因此宣称支持自动跟随所有聊天或全部权限事件。
 
 依据：[DWM 窗口属性](https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute)、[Mica 材质](https://learn.microsoft.com/en-us/windows/apps/design/style/mica)。隔离外观检查覆盖两套颜色、下拉打开与动作绑定以及系统通知重新取色；本机高对比度和旧版 Windows 未切换实测。
+
+已完成完整桌面回归、公开包外观与五状态播放检查，并发布 [v0.3.0-preview.7](https://github.com/tanghuanqiang/ai-pet/releases/tag/v0.3.0-preview.7)。本机安装已更新并打开新版管理窗口；照片、主题、偏好、连接和审核记录等九项文件校验保持一致，重启后真实当前 Codex 会话继续触发原宠物动作。实际窗口读取到深色标题栏、圆角及 Mica 属性均已启用。Windows ZIP SHA-256 为 `f4802726a3e3910b3402da5c3f483cced8b52f9bf2085bf142daf8ea103efed2`，Skill 为 `06d53a98972cb7688aebf4e11e66e1dae94ff34c0a657ef86048c393efc7c0cb`，均与远端附件一致。验证和私有备份存于 `generated/appearance-20261017/`，不进入公开源码。
