@@ -137,3 +137,5 @@
 下一步生成研究如继续，优先增加真正的动物动作驱动/连续控制序列，避免仅用静态照片和区域掩码要求模型自行产生精确局部动作；同时单独处理图集帧对齐、时序与循环接缝。继续保留默认“已有 Agent/生成工具 → 预览使用”的决定。公开源码提供 `tools/research_vace_benchmark.py` 以便用自有案例复现，默认安装包不带模型或实验照片。
 
 本地完整记录位于 `generated/exploration-20261016/experiment-results.json`，目录名为实验起始日期；模型、照片、候选及原始实验记录不进入公开源码白名单。
+
+已发布 [v0.3.0-preview.6](https://github.com/tanghuanqiang/ai-pet/releases/tag/v0.3.0-preview.6)，包含上述 Windows 修复、Agent 上报、更新后的 Skill 和质量说明。实际 Git 提交导出的源码独立构建及原生 DPI 检查通过；Windows ZIP SHA-256 为 `678f1234157d219ed29d3c9e9420e2620a28aa49ba9548d2b70d5298165b408c`，独立 Skill 为 `06d53a98972cb7688aebf4e11e66e1dae94ff34c0a657ef86048c393efc7c0cb`，两项远端指纹一致。本机日常安装已更新并启动，原照片、主题、偏好、连接等七项文件升级前后校验一致，真实当前 Codex 会话继续触发原宠物工作动作。新生成候选未替换原作品，六项菜单不变。
