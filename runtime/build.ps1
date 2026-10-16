@@ -59,7 +59,7 @@ $runningPreview = Get-Process -Name 'AIPetDesktop' -ErrorAction SilentlyContinue
 if ($runningPreview) {
     throw 'Close the running desktop preview from its tray menu before rebuilding.'
 }
-$arguments = @('/nologo', '/target:winexe', "/out:$exePath", ('/win32manifest:' + (Join-Path $runtimeRoot 'app.manifest'))) + ($references | ForEach-Object { "/reference:$_" }) + @($sourcePath, (Join-Path $runtimeRoot 'PetExperience.cs'), (Join-Path $runtimeRoot 'PetCodex.cs'), (Join-Path $runtimeRoot 'PetGeneration.cs'), (Join-Path $runtimeRoot 'PetDisplay.cs'))
+$arguments = @('/nologo', '/target:winexe', "/out:$exePath", ('/win32manifest:' + (Join-Path $runtimeRoot 'app.manifest'))) + ($references | ForEach-Object { "/reference:$_" }) + @($sourcePath, (Join-Path $runtimeRoot 'PetExperience.cs'), (Join-Path $runtimeRoot 'PetCodex.cs'), (Join-Path $runtimeRoot 'PetGeneration.cs'), (Join-Path $runtimeRoot 'PetDisplay.cs'), (Join-Path $runtimeRoot 'PetAppearance.cs'))
 & $compiler @arguments
 if ($LASTEXITCODE -ne 0) { throw "C# compilation failed with exit code $LASTEXITCODE" }
 Copy-Item -LiteralPath (Join-Path $runtimeRoot 'AIPetDesktop.exe.config') -Destination ($exePath + '.config') -Force
@@ -119,6 +119,12 @@ $displayProcess = Start-Process -FilePath $exePath -ArgumentList @('--test-displ
 if ($displayProcess.ExitCode -ne 0) { throw 'Native display compatibility failed.' }
 $displayResult = Get-Content -LiteralPath $displayResultPath -Raw | ConvertFrom-Json
 if (-not $displayResult.perMonitorV2 -or -not $displayResult.offscreenRecovery -or -not $displayResult.syntheticSettingsCallback) { throw 'Native display compatibility assertions failed.' }
+$appearanceRoot = Join-Path $smokeDataRoot 'appearance'
+$appearanceProcess = Start-Process -FilePath $exePath -ArgumentList @('--ai-test-appearance', $appearanceRoot) -PassThru -Wait -WindowStyle Hidden
+if ($appearanceProcess.ExitCode -ne 0) { throw 'Modern appearance checks failed.' }
+$appearanceResult = Get-Content -LiteralPath (Join-Path $appearanceRoot 'result.json') -Raw | ConvertFrom-Json
+if (-not $appearanceResult.passed -or -not $appearanceResult.systemNotificationRefresh) { throw 'Modern appearance assertions failed.' }
+
 $bitmap = New-Object System.Drawing.Bitmap($referencePath)
 $imageStream = New-Object System.IO.MemoryStream
 $bitmap.Save($imageStream, [System.Drawing.Imaging.ImageFormat]::Png)
@@ -242,7 +248,7 @@ if ($preferencesViewProcess.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $pre
     throw "Native preferences dialog render failed (exit code $($preferencesViewProcess.ExitCode))."
 }
 $preferencesViewResult = Get-Content -LiteralPath $preferencesViewResultPath -Raw | ConvertFrom-Json
-if (-not $preferencesViewResult.rendered -or $preferencesViewResult.saved -or $preferencesViewResult.size -ne '430x480') {
+if (-not $preferencesViewResult.rendered -or $preferencesViewResult.saved -or $preferencesViewResult.size -ne '470x550') {
     throw "Native preferences dialog reported an invalid render: $($preferencesViewResult | ConvertTo-Json -Compress)"
 }
 $importPreviewPath = Join-Path $outputRoot 'import-preview.png'

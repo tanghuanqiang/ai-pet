@@ -139,6 +139,7 @@ namespace AIPet.Desktop
             try
             {
                 if (args[0] == "--ai-codex-hook" && args.Length == 1) RecordSimpleCodexHook();
+                else if (args[0] == "--ai-test-appearance" && args.Length == 2) TestModernAppearance(Path.GetFullPath(args[1]));
                 else if (args[0] == "--ai-test-live-desktop" && args.Length == 4)
                     ObserveLiveDesktopForTest(args[1], Int32.Parse(args[2], CultureInfo.InvariantCulture), Path.GetFullPath(args[3]));
                 else if (args[0] == "--ai-test-generation-review" && args.Length == 3) TestGenerationReview(args[1], Path.GetFullPath(args[2]));
@@ -374,9 +375,11 @@ namespace AIPet.Desktop
 
         private static TextBlock ManagerText(string text, bool heading)
         {
-            return new TextBlock { Text = text, FontSize = heading ? 22 : 14,
+            TextBlock block = new TextBlock { Text = text, FontSize = heading ? 26 : 14,
                 FontWeight = heading ? FontWeights.SemiBold : FontWeights.Normal,
-                TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 14) };
+                TextWrapping = TextWrapping.Wrap, LineHeight = heading ? 34 : 22, Margin = new Thickness(0, 0, 0, heading ? 12 : 18) };
+            block.SetResourceReference(TextBlock.ForegroundProperty, heading ? "PetText" : "PetMuted");
+            return block;
         }
 
         private static Button ManagerButton(string label, Action action)
@@ -392,7 +395,7 @@ namespace AIPet.Desktop
 
         private static StackPanel ManagerPage(string title, string description)
         {
-            StackPanel page = new StackPanel { Margin = new Thickness(24) };
+            StackPanel page = new StackPanel { Margin = new Thickness(28) };
             page.Children.Add(ManagerText(title, true)); page.Children.Add(ManagerText(description, false)); return page;
         }
 
@@ -400,12 +403,12 @@ namespace AIPet.Desktop
         {
             if (petManager != null)
             { petManagerTabs.SelectedIndex = tab; petManager.Show(); petManager.Activate(); return; }
-            petManager = new Window { Title = "AI Pet · 你的桌面伙伴", Width = 700, Height = 640,
-                MinWidth = 560, MinHeight = 480, WindowStartupLocation = WindowStartupLocation.CenterScreen,
-                Background = new SolidColorBrush(Color.FromRgb(250, 248, 244)), FontFamily = new FontFamily("Microsoft YaHei UI") };
+            petManager = new Window { Title = "AI Pet · 你的桌面伙伴", Width = 860, Height = 740,
+                MinWidth = 720, MinHeight = 540, WindowStartupLocation = WindowStartupLocation.CenterScreen };
+            AttachModernAppearance(petManager);
             AttachDisplayRecovery(petManager);
             petManager.Closed += delegate { petManager = null; petManagerTabs = null; };
-            petManagerTabs = new TabControl { Margin = new Thickness(12), FontSize = 14 };
+            petManagerTabs = new TabControl { FontSize = 14 };
             string savedCreationPrompt = creationDraftPrompt ?? "";
             if (latestCreationRequest == null) latestCreationRequest = LatestCreationId();
             if (latestCreationRequest != null) {
@@ -457,6 +460,7 @@ namespace AIPet.Desktop
                 } catch (Exception error) { creationStatus.Text = error.Message; }
             });
             custom.Children.Add(generate);
+            generate.SetResourceReference(FrameworkElement.StyleProperty, "PetPrimary");
             custom.Children.Add(creationStatus);
             WrapPanel generationControls = new WrapPanel();
             Button retry = ManagerButton("重试生成", delegate {
@@ -531,10 +535,16 @@ namespace AIPet.Desktop
             custom.Children.Add(actionButtons);
             AddManagerTab("自定义", custom);
 
-            StackPanel connection = ManagerPage("连接 AI 工具", "工具报告任务状态，宠物播放你选择的动作。只需绑定一次；也可以让你的 Agent 帮你连接。");
-            TextBlock connectionStatus = ManagerText(connectedAiTool != null ? "已连接：" + connectedAiTool + " / " + connectedAiSession
-                : selectedCodexSession != null ? "已连接 Codex 会话" : "尚未连接", false);
-            connection.Children.Add(connectionStatus);
+            StackPanel connection = ManagerPage("连接 AI 工具", "选好会话，宠物就会跟着任务动起来。");
+            TextBlock connectionStatus = ManagerText("", false);
+            connectionStatus.Margin = new Thickness(0);
+            Border connectionCard = new Border { CornerRadius = new CornerRadius(8), Padding = new Thickness(16), Margin = new Thickness(0, 0, 0, 20), Child = connectionStatus };
+            connectionCard.SetResourceReference(Border.BackgroundProperty, "PetSelected");
+            connection.Children.Add(connectionCard);
+            System.Windows.Threading.DispatcherTimer connectionRefresh = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            Action refreshConnection = delegate { connectionStatus.Text = FriendlyConnectionStatus(); };
+            connectionRefresh.Tick += delegate { refreshConnection(); }; refreshConnection(); connectionRefresh.Start();
+            petManager.Closed += delegate { connectionRefresh.Stop(); };
             Expander agentSetup = new Expander { Header = "其他工具：让 Agent 连接，或手动填写", Margin = new Thickness(0, 0, 0, 12) };
             StackPanel agentFields = new StackPanel();
             TextBox toolInput = new TextBox { Text = connectedAiTool ?? "my-agent", Margin = new Thickness(0, 0, 0, 10) };
@@ -547,16 +557,14 @@ namespace AIPet.Desktop
                 connectionStatus.Text = "已连接：" + connectedAiTool + " / " + connectedAiSession;
             }));
             agentSetup.Content = agentFields;
-            Expander codexSetup = new Expander { Header = "可连接的本机会话", Margin = new Thickness(0, 0, 0, 12) };
+            Expander codexSetup = new Expander { Header = "可连接的本机会话", Visibility = Visibility.Collapsed, Margin = new Thickness(0, 0, 0, 12) };
             connection.Children.Add(ManagerButton("连接 Codex：选择任务", delegate {
                 PopulateCodexSessionMenu();
                 StackPanel sessions = new StackPanel();
                 AddCodexConnectionButtons(sessions, codexSessionItem.DropDownItems, connectionStatus);
-                codexSetup.Content = sessions; codexSetup.IsExpanded = true;
+                codexSetup.Content = sessions; codexSetup.Visibility = Visibility.Visible; codexSetup.IsExpanded = true;
             }));
             connection.Children.Add(codexSetup);
-            connection.Children.Add(ManagerText("Codex 本机会话可读取开始、工具活动、结束和中断。授权提醒需 Agent 配置 Codex Hooks 并由你在 Codex 中信任；普通文字追问暂不自动识别。", false));
-            connection.Children.Add(agentSetup);
             connection.Children.Add(ManagerButton("断开连接", delegate {
                 SaveAiConnection(null, null); selectedCodexSession = null; selectedDesktopRolloutPath = null; ClearDesktopSelection();
                 SetThemeAction("idle", false); connectionStatus.Text = "已断开连接";
@@ -566,7 +574,7 @@ namespace AIPet.Desktop
                 string state = AiStates[i];
                 StackPanel row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 12) };
                 row.Children.Add(new TextBlock { Text = AiStateLabels[i], Width = 160, VerticalAlignment = VerticalAlignment.Center });
-                ComboBox choice = new ComboBox { Width = 240, Tag = state };
+                ComboBox choice = new ComboBox { Width = 210, Tag = state };
                 if (activeTheme != null) foreach (ThemeAction action in activeTheme.Actions)
                 {
                     ComboBoxItem item = new ComboBoxItem { Content = SimpleActionLabel(action.Slot), Tag = action.Slot };
@@ -583,6 +591,8 @@ namespace AIPet.Desktop
                 };
                 row.Children.Add(choice); connection.Children.Add(row);
             }
+            connection.Children.Add(agentSetup);
+            connection.Children.Add(new Expander { Header = "连接说明", Margin = new Thickness(0, 0, 0, 12), Content = ManagerText("每次跟随一个 Codex 会话；切换会话时，请重新选择。可观察开始、工具活动、结束和中断；已显示的输入请求可触发提醒，普通文字追问需要 Agent 主动报告。连接状态不会自动发送制作请求。", false) });
             connection.Children.Add(ManagerText("连接其他工具需要对应适配器发送状态。任务结束不代表成功；工具未提供的状态不自动猜测。", false));
             AddManagerTab("连接 AI 工具", connection);
 
@@ -605,7 +615,31 @@ namespace AIPet.Desktop
                 }));
             }
             advanced.Content = utilities; settings.Children.Add(advanced); AddManagerTab("设置", settings);
-            petManager.Content = petManagerTabs; petManagerTabs.SelectedIndex = tab; petManager.Show();
+            DockPanel managerShell = new DockPanel();
+            StackPanel brand = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(24, 14, 20, 10) };
+            brand.Children.Add(new TextBlock { Text = "AI Pet", FontSize = 20, FontWeight = FontWeights.SemiBold });
+            TextBlock tagline = new TextBlock { Text = "你的桌面伙伴", Margin = new Thickness(14, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+            tagline.SetResourceReference(TextBlock.ForegroundProperty, "PetMuted"); brand.Children.Add(tagline);
+            DockPanel.SetDock(brand, Dock.Top); managerShell.Children.Add(brand); managerShell.Children.Add(petManagerTabs);
+            petManager.Content = managerShell; petManagerTabs.SelectedIndex = tab; petManager.Show();
+        }
+
+        private static string FriendlyConnectionStatus()
+        {
+            if (connectedAiTool == null) return "尚未连接\n选择 Codex 会话，或连接自己的 Agent。";
+            string title = connectedAiTool == "codex" ? "已连接 Codex" : "已连接 " + connectedAiTool;
+            if (connectedAiTool == "codex" && selectedDesktopRolloutPath != null) title += " · 已选定本机会话";
+            int state = Array.IndexOf(AiStates, lastAiState);
+            string detail = state < 0 ? "等待这个会话的新任务状态…" : AiStateLabels[state];
+            if (lastAiOutcome == "hidden") detail += " · 桌宠已隐藏";
+            else if (lastAiOutcome == "quiet-hours") detail += " · 安静时段，暂停播放";
+            else if (lastAiOutcome == "action-unavailable") detail += " · 请为此状态选择可用动作";
+            else if (lastAiOutcome == "played" && activeThemeAction != null) detail += " · 动作：" + SimpleActionLabel(activeThemeAction.Slot);
+            if (connectedAiTool == "codex" && lastCodexActionAtMs > 0) {
+                long seconds = Math.Max(0, (CurrentUnixMilliseconds() - lastCodexActionAtMs) / 1000);
+                detail += "\n最近收到状态：" + (seconds < 60 ? seconds + " 秒前" : seconds / 60 + " 分钟前");
+            }
+            return title + "\n" + detail;
         }
 
         private static void AddManagerTab(string label, StackPanel content)

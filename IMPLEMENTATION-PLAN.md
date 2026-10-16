@@ -139,3 +139,11 @@
 本地完整记录位于 `generated/exploration-20261016/experiment-results.json`，目录名为实验起始日期；模型、照片、候选及原始实验记录不进入公开源码白名单。
 
 已发布 [v0.3.0-preview.6](https://github.com/tanghuanqiang/ai-pet/releases/tag/v0.3.0-preview.6)，包含上述 Windows 修复、Agent 上报、更新后的 Skill 和质量说明。实际 Git 提交导出的源码独立构建及原生 DPI 检查通过；Windows ZIP SHA-256 为 `678f1234157d219ed29d3c9e9420e2620a28aa49ba9548d2b70d5298165b408c`，独立 Skill 为 `06d53a98972cb7688aebf4e11e66e1dae94ff34c0a657ef86048c393efc7c0cb`，两项远端指纹一致。本机日常安装已更新并启动，原照片、主题、偏好、连接等七项文件升级前后校验一致，真实当前 Codex 会话继续触发原宠物工作动作。新生成候选未替换原作品，六项菜单不变。
+
+## 2026-10-17 Windows 界面调整
+
+根据用户反馈，管理窗口改为侧边导航、圆角按钮和输入框，偏好及动作预览统一使用同一套局部 WPF 样式。`PetAppearance.cs` 直接调用系统 DWM 的深色标题栏、圆角和 Mica，不引入新的运行时依赖；通过窗口消息响应系统外观变化。Windows 11 22621+ 且系统允许透明效果时尝试启用材质，失败、旧系统或高对比度使用实色；高对比度取系统文字、背景和选择颜色。透明桌宠本身不套用窗口材质。
+
+连接页改为实时可读状态，显示所连工具、任务状态、当前动作和 Codex 最近事件时间，隐藏内部会话指纹。说明每次跟随一个所选会话，切换会话需重新选择；保留手动 Agent 接口和五种动作映射。本次检查中实际安装持续收到当前 Codex 会话的工具活动，联动结果为 `played`，未发现连接中断；不因此宣称支持自动跟随所有聊天或全部权限事件。
+
+依据：[DWM 窗口属性](https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute)、[Mica 材质](https://learn.microsoft.com/en-us/windows/apps/design/style/mica)。隔离外观检查覆盖两套颜色、下拉打开与动作绑定以及系统通知重新取色；本机高对比度和旧版 Windows 未切换实测。

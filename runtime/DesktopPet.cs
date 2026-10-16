@@ -193,7 +193,7 @@ namespace AIPet.Desktop
         {
             // Off-screen render/test helpers intentionally use invisible coordinates.
             // Interactive playback and explicit visible reviews recover their position.
-            displayRecoveryEnabled = args.Length == 0 || args[0] == "--test-display-compatibility" ||
+            displayRecoveryEnabled = args.Length == 0 || args[0] == "--settings" || args[0] == "--test-display-compatibility" ||
                 Array.IndexOf(args, "--visible-review") >= 0;
             if (args.Length == 1 && args[0] == "--ai-codex-hook") {
                 try {
@@ -243,7 +243,8 @@ namespace AIPet.Desktop
                 : Path.Combine(String.IsNullOrEmpty(dataDirectoryOverride) ? AppDomain.CurrentDomain.BaseDirectory : dataRoot, "codex-events");
             bool importThemeAtLaunch = args.Length == 2 && args[0] == "--import-theme";
             bool rollbackThemeAtLaunch = args.Length == 1 && args[0] == "--rollback-theme";
-            bool normalLaunch = args.Length == 0 || importThemeAtLaunch || rollbackThemeAtLaunch;
+            bool settingsAtLaunch = args.Length == 1 && args[0] == "--settings";
+            bool normalLaunch = args.Length == 0 || settingsAtLaunch || importThemeAtLaunch || rollbackThemeAtLaunch;
             persistRuntimePlacement = normalLaunch;
             string reviewLedgerOverride = Environment.GetEnvironmentVariable("AI_PET_REVIEW_LEDGER");
             if (!String.IsNullOrEmpty(reviewLedgerOverride) && !Path.IsPathRooted(reviewLedgerOverride))
@@ -422,7 +423,7 @@ namespace AIPet.Desktop
                     BuildWindow(photoPath);
                     preferencesRenderPath = Path.GetFullPath(args[1]);
                     ShowPreferences();
-                    File.WriteAllText(Path.GetFullPath(args[2]), "{\"rendered\":true,\"saved\":false,\"size\":\"430x480\"}");
+                    File.WriteAllText(Path.GetFullPath(args[2]), "{\"rendered\":true,\"saved\":false,\"size\":\"470x550\"}");
                 }
                 catch
                 {
@@ -1534,6 +1535,7 @@ namespace AIPet.Desktop
                 ShowWindow();
                 StartCodexEventPolling();
                 StartAutomaticActionPolling();
+                if (settingsAtLaunch) app.Dispatcher.BeginInvoke(new Action(delegate { ShowPetManager(0); }));
                 if (importThemeAtLaunch)
                     app.Dispatcher.BeginInvoke(new Action(delegate { ImportThemePackage(args[1]); }));
                 if (rollbackThemeAtLaunch)
@@ -3630,11 +3632,11 @@ namespace AIPet.Desktop
             Button restore = new Button { Content = "设为待制作", Width = 104, IsDefault = true, IsEnabled = false,
                 Background = new SolidColorBrush(MediaColor.FromRgb(222, 126, 77)),
                 Foreground = new SolidColorBrush(MediaColor.FromRgb(89, 79, 64)) };
-            reviewed.Checked += delegate { restore.IsEnabled = true; restore.Foreground = MediaBrushes.White; };
+            reviewed.Checked += delegate { restore.IsEnabled = true; restore.SetResourceReference(Control.ForegroundProperty, "PetAccentText"); };
             reviewed.Unchecked += delegate
             {
                 restore.IsEnabled = false;
-                restore.Foreground = new SolidColorBrush(MediaColor.FromRgb(89, 79, 64));
+                restore.SetResourceReference(Control.ForegroundProperty, "PetAccentText");
             };
             restore.Click += delegate { review.DialogResult = true; };
             buttons.Children.Add(restore);
@@ -3642,6 +3644,7 @@ namespace AIPet.Desktop
             layout.Children.Add(buttons);
 
             review.Content = layout;
+            AttachModernDialog(review);
             if (!String.IsNullOrEmpty(roleReviewRenderPath))
             {
                 string outputPath = roleReviewRenderPath;
@@ -3979,6 +3982,7 @@ namespace AIPet.Desktop
             layout.Children.Add(buttons);
 
             review.Content = layout;
+            AttachModernDialog(review);
             HashSet<string> playedSlots = new HashSet<string>(StringComparer.Ordinal);
             HashSet<string> reviewedSlots = new HashSet<string>(StringComparer.Ordinal);
             ThemeAction selectedAction = idle;
@@ -4104,8 +4108,8 @@ namespace AIPet.Desktop
         {
             Window dialog = new Window();
             dialog.Title = "陪伴偏好";
-            dialog.Width = 430;
-            dialog.Height = 440;
+            dialog.Width = 470;
+            dialog.Height = 550;
             dialog.ResizeMode = ResizeMode.NoResize;
             dialog.WindowStyle = WindowStyle.ToolWindow;
             dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -4133,8 +4137,8 @@ namespace AIPet.Desktop
             content.Children.Add(quiet);
 
             StackPanel quietTimes = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(20, 0, 0, 14) };
-            TextBox quietStart = new TextBox { Text = preferences.QuietStart, Width = 76, Height = 27, VerticalContentAlignment = VerticalAlignment.Center };
-            TextBox quietEnd = new TextBox { Text = preferences.QuietEnd, Width = 76, Height = 27, VerticalContentAlignment = VerticalAlignment.Center };
+            TextBox quietStart = new TextBox { Text = preferences.QuietStart, Width = 80, Height = 36, VerticalContentAlignment = VerticalAlignment.Center };
+            TextBox quietEnd = new TextBox { Text = preferences.QuietEnd, Width = 80, Height = 36, VerticalContentAlignment = VerticalAlignment.Center };
             quietTimes.Children.Add(new TextBlock { Text = "从", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) });
             quietTimes.Children.Add(quietStart);
             quietTimes.Children.Add(new TextBlock { Text = "到", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 6, 0) });
@@ -4171,9 +4175,9 @@ namespace AIPet.Desktop
             buttons.Children.Add(cancel);
             buttons.Children.Add(save);
             content.Children.Add(buttons);
-            Border shell = new Border { Width = 430, Height = 480, Background = dialog.Background, Padding = new Thickness(20), Child = content };
-            dialog.Height = 480;
-            dialog.Content = shell;
+            Border shell = new Border { Padding = new Thickness(24), Child = content };
+            dialog.Content = new ScrollViewer { Content = shell, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+            AttachModernDialog(dialog);
 
             save.Click += delegate
             {
